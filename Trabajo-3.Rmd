@@ -15,6 +15,8 @@ Librerias
 library(pdR)
 library(forecast)
 library(lmtest)
+library(fANCOVA)
+library(TSA)
 ```
 
 
@@ -34,6 +36,10 @@ t=1:n
 
 #Serie recortada
 yt=ts(datos[t],freq=12,start=c(2001,1))
+
+# Para el pronostico
+tnuevo=(n+1):length(datos)
+ytf=ts(datos[tnuevo],freq=12,start=c(2019,1)) #Datos para la validación cruzada
 ```
 
 
@@ -155,7 +161,14 @@ abline(v=c(12,24,36),lty=2,col=2)
 
 **Como ajustar y pronosticar un SARIMA(p,d,q) × (P,D,Q)[s] sin deriva y con todos los coeficientes**
 
-Ajuste modelo 1 ARIMA(8,1,2)(0,1,1)[12]
+Ajuste y pronostico del modelo 1 ARIMA(8,1,2)(0,1,1)[12]
+
+Ecuación:
+
+$$\phi_8(B)  ∇^1_{12}
+∇^dYt = \theta_2(B) \Theta_1(B^{12})Et$$
+
+$$(1-\phi_1B-\phi_2B^2-\phi_3B^3-\phi_4B^4-\phi_5B^5-\phi_6B^6-\phi_7B^7-\phi_8B^8)(1-B)(1-B^{12})Y_t=(1+\theta_1+\theta_2B^2)(1+\Theta_1B^{12})E_t$$
 
 ```{r}
 modelo1=Arima(yt,order=c(8,1,2),seasonal=list(order=c(0,1,1)),method="ML")
@@ -163,22 +176,34 @@ coeftest(modelo1)
 
 pronostico1=ts(as.data.frame(forecast(modelo1,h=12,level=95)),freq=12,start=c(2019,1))
 pronostico1
+
+accuracy(pronostico1[,1],ytf)
 ```
 
+#######################################################################
 
 
-**Como ajustar y pronosticar un SARIMA(p,d,q)×(P,D,Q)[s] sin deriva y con algunos de los coeficientes fijos en cero**
+Ajuste y pronostico del modelo 2 ARIMA(1,0,2)(0,1,1)[12] con deriva:
 
-El siguiente codigo sale de los modelos de armasubsets (modelo 3 y modelo 4) por lo tanto se debe corregir el siguiente codigo.
+Ecuación:
+
+$$\phi_1(B)  ∇^1_{12}Yt = \delta + \theta_2(B) \Theta_1(B^{12})Et$$
+
+$$(1-\phi_1B)(1-B^{12})Y_t=\delta+ (1+\theta_1+\theta_2B^2)(1+\Theta_1B^{12})E_t$$
+
+
 
 ```{r}
-modelo=Arima(yt,order=c(9,1,3),seasonal=list(order=c(1,1,2)),
-fixed=c(0,NA,NA,rep(0,5),NA,NA,0,NA,NA,0,NA),method="ML")
-coeftest(modelo) #Tabla de par´ametros estimados; valores P bajo N(0,1)
-#Fecha de inicio de los pron´osticos es enero de 2019 y horizonte de 12 periodos
-pronostico=ts(as.data.frame(forecast(modelo,h=12,level=95)),freq=12,start=c(2019,1))
-pronostico
+modelo2=Arima(yt,order=c(1,0,2),seasonal=list(order=c(0,1,1)),method="ML", include.drift = T)
+coeftest(modelo2) 
+
+pronostico2=ts(as.data.frame(forecast(modelo2,h=12,level=95)),freq=12,start=c(2019,1))
+pronostico2
+
+accuracy(pronostico2[,1],ytf)
 ```
+
+
 
 
 **Calculo de exp(C∗n(p)) en modelos ARIMA(p,d,q)(P,D,Q)[s]:**
@@ -206,4 +231,140 @@ crit.inf.resid=function(residuales,n.par,AIC="TRUE"){
 # BICmodelo=exp(crit.inf.resid(residuales=residuals(modelo),n.par=k,AIC="FALSE"))
 
 ```
+
+
+
+
+
+**identificación con armasubsets().**
+
+Modelo 3
+
+```{r}
+plot(armasubsets(difdD12,nar=12,nma=12,y.name='AR',ar.method='ols'))
+```
+
+Parametros sombreados:
+
+$$\phi_1, \phi_2, \phi_6, \phi_7, \theta_4, \Theta_1$$
+
+* Polinomio AR regular: $\phi_7(B)=1-\phi_1B-\phi_2B^2-\phi_6B^6-\phi_7B^7$
+* Polinomio MA regular: $\theta_4(B)=1+\theta_4B^4$
+* Polinomio AR estacional: No hay
+* Polinomio MA estacional: $\Theta_1(B^{12})=1+\Theta_1B^{12}$
+
+Por lo tanto el modelo es un: $SARIMA(7,1,4)(0,1,1)[12]$
+
+
+$$(1-\phi_1B-\phi_2B^2-\phi_6B^6-\phi_7B^7)(1-B)(1-B^{12})Y_t=(1+\theta_4B^4)(1+\Theta_1B^{12})E_t$$
+
+Ajuste y pronostico del modelo 3 
+
+Por ejemplo, para ajustar sin deriva y pronosticar un SARIMA(7,1,4)×(0,1,1)[12], con $\phi_j \neq 0$, para j = 1, 2, 6, 7, $\theta_i \neq 0$, para
+i = 4, y $\Theta_l \neq 0$ para l = 1, y asumiendo que Yt ya tiene formato de serie de tiempo con frecuencia s = 12:
+
+```{r}
+modelo3 <- Arima(yt,order=c(7,1,4),seasonal=list(order=c(0,1,1)),
+fixed=c(NA,NA,0,0,0,NA, NA,rep(0,3),NA,NA),method="ML")
+
+coeftest(modelo3)
+pronostico3=ts(as.data.frame(forecast(modelo3,h=12,level=95)),freq=12,start=c(2019,1))
+pronostico3
+
+accuracy(pronostico3[,1],ytf)
+```
+
+
+
+
+Modelo 4
+
+
+```{r}
+plot(armasubsets(difdD12,nar=18,nma=18,y.name='AR',ar.method="ols"))
+```
+
+Parametros sombreados
+
+$$\phi_1, \phi_2, \phi_8, \theta_4, \Theta_1, \theta_6 \Theta_1$$
+
+Ademas se incluye el $\theta_6$
+
+* Polinomio AR regular: $\phi_8(B)=1-\phi_1B-\phi_2B^2-\phi_8B^8$
+* Polinomio MA regular: $\theta_6(B)=1+\theta_4B^4+\theta_6B^6$
+* Polinomio AR estacional: No hay
+* Polinomio MA estacional: $\Theta_1(B^{12})=1+\Theta_1B^{12}$
+
+Por lo tanto el modelo es un: $SARIMA(8,1,6)(0,1,1)[12]$
+
+
+$$(1-\phi_1B-\phi_2B^2-\phi_8B^8)(1-B)(1-B^{12})Y_t=(1+\theta_4B^4+\theta_6B^6)(1+\Theta_1B^{12})E_t$$
+
+Ajuste y pronostico del modelo 4 
+
+Por ejemplo, para ajustar sin deriva y pronosticar un SARIMA(8,1,6)×(0,1,1)[12], con $\phi_j \neq 0$, para j = 1, 2, 8, $\theta_i \neq 0$, para
+i = 4, 6 y $\Theta_l \neq 0$ para l = 1, y asumiendo que Yt ya tiene formato de serie de tiempo con frecuencia s = 12:
+
+
+
+```{r}
+modelo4 <- Arima(yt,order=c(8,1,6),seasonal=list(order=c(0,1,1)),
+fixed=c(NA,NA,rep(0,5),NA, rep(0,3), NA, 0, NA, NA),method="ML")
+
+coeftest(modelo4)
+pronostico4=ts(as.data.frame(forecast(modelo4,h=12,level=95)),freq=12,start=c(2019,1))
+pronostico4
+
+accuracy(pronostico4[,1],ytf)
+```
+
+# Gráficas de ajuste de los modelos:
+
+
+```{r}
+#Ajustes
+
+yhatmodelo1 <- modelo1$fitted
+yhatmodelo2 <- modelo2$fitted
+yhatmodelo3 <- modelo3$fitted
+yhatmodelo4 <- modelo4$fitted
+```
+
+
+
+```{r}
+# Modelo 1 
+plot(yt,main="Ajuste con modelo 1")
+lines(yhatmodelo1,col=4)
+legend("topleft",legend=c("Real","ajustada"),col=c(1,4),lwd=2)
+grid()
+
+# Modelo 2
+plot(yt,main="Ajuste con modelo 2")
+lines(yhatmodelo2,col=2)
+legend("topleft",legend=c("Real","ajustada"),col=c(1,2),lwd=2)
+grid()
+
+# Modelo 3
+plot(yt,main="Ajuste con modelo 3")
+lines(yhatmodelo3,col=3)
+legend("topleft",legend=c("Real","ajustada"),col=c(1,3),lwd=2)
+grid()
+
+# Modelo 4
+plot(yt,main="Ajuste con modelo 4")
+lines(yhatmodelo4,col=3)
+legend("topleft",legend=c("Real","ajustada"),col=c(1,3),lwd=2)
+grid()
+```
+
+
+
+
+
+
+
+
+
+
 
