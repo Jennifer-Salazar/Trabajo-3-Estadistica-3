@@ -17,6 +17,7 @@ library(forecast)
 library(lmtest)
 library(fANCOVA)
 library(TSA)
+library(uroot)
 ```
 
 
@@ -168,7 +169,7 @@ Ecuación:
 $$\phi_8(B)  ∇^1_{12}
 ∇^dYt = \theta_2(B) \Theta_1(B^{12})Et$$
 
-$$(1-\phi_1B-\phi_2B^2-\phi_3B^3-\phi_4B^4-\phi_5B^5-\phi_6B^6-\phi_7B^7-\phi_8B^8)(1-B)(1-B^{12})Y_t=(1+\theta_1+\theta_2B^2)(1+\Theta_1B^{12})E_t$$
+$$(1-\phi_1B-\phi_2B^2-\phi_3B^3-\phi_4B^4-\phi_5B^5-\phi_6B^6-\phi_7B^7-\phi_8B^8)(1-B)(1-B^{12})Y_t=(1+\theta_1+\theta_2B^2)(1+\Theta_1B^{12})E_t, ~con~ \{E_t\}_t~un~R.B \sim N(0, \sigma^2)$$
 
 ```{r}
 modelo1=Arima(yt,order=c(8,1,2),seasonal=list(order=c(0,1,1)),method="ML")
@@ -189,7 +190,7 @@ Ecuación:
 
 $$\phi_1(B)  ∇^1_{12}Yt = \delta + \theta_2(B) \Theta_1(B^{12})Et$$
 
-$$(1-\phi_1B)(1-B^{12})Y_t=\delta+ (1+\theta_1+\theta_2B^2)(1+\Theta_1B^{12})E_t$$
+$$(1-\phi_1B)(1-B^{12})Y_t=\delta+ (1+\theta_1+\theta_2B^2)(1+\Theta_1B^{12})E_t, ~con~ \{E_t\}_t~un~R.B \sim N(0, \sigma^2)$$
 
 
 
@@ -202,36 +203,6 @@ pronostico2
 
 accuracy(pronostico2[,1],ytf)
 ```
-
-
-
-
-**Calculo de exp(C∗n(p)) en modelos ARIMA(p,d,q)(P,D,Q)[s]:**
-
-
-```{r}
-#Creando funci´on usuario crit.inf.resid() para calcular C*n(p)
-crit.inf.resid=function(residuales,n.par,AIC="TRUE"){
-  if(AIC=="TRUE"){
-    #Calcula AIC
-    CI=log(mean(residuales^2))+2*n.par/length(residuales)
-  }
-  if(AIC=="FALSE"){
-    #Calcula BIC
-    CI=log(mean(residuales^2))+n.par*log(length(residuales))/length(residuales)
-  }
-  CI
-}
-
-
-#Tome k igual al total de parametros del modelo, contando incluso la deriva cuando el modelo tenga este parametro
-#Si no transformo a Yt:
-
-# AICmodelo=exp(crit.inf.resid(residuales=residuals(modelo),n.par=k))
-# BICmodelo=exp(crit.inf.resid(residuales=residuals(modelo),n.par=k,AIC="FALSE"))
-
-```
-
 
 
 
@@ -256,7 +227,7 @@ $$\phi_1, \phi_2, \phi_6, \phi_7, \theta_4, \Theta_1$$
 Por lo tanto el modelo es un: $SARIMA(7,1,4)(0,1,1)[12]$
 
 
-$$(1-\phi_1B-\phi_2B^2-\phi_6B^6-\phi_7B^7)(1-B)(1-B^{12})Y_t=(1+\theta_4B^4)(1+\Theta_1B^{12})E_t$$
+$$(1-\phi_1B-\phi_2B^2-\phi_6B^6-\phi_7B^7)(1-B)(1-B^{12})Y_t=(1+\theta_4B^4)(1+\Theta_1B^{12})E_t, ~con~ \{E_t\}_t~un~R.B \sim N(0, \sigma^2)$$
 
 Ajuste y pronostico del modelo 3 
 
@@ -298,7 +269,7 @@ Ademas se incluye el $\theta_6$
 Por lo tanto el modelo es un: $SARIMA(8,1,6)(0,1,1)[12]$
 
 
-$$(1-\phi_1B-\phi_2B^2-\phi_8B^8)(1-B)(1-B^{12})Y_t=(1+\theta_4B^4+\theta_6B^6)(1+\Theta_1B^{12})E_t$$
+$$(1-\phi_1B-\phi_2B^2-\phi_8B^8)(1-B)(1-B^{12})Y_t=(1+\theta_4B^4+\theta_6B^6)(1+\Theta_1B^{12})E_t, ~con~ \{E_t\}_t~un~R.B \sim N(0, \sigma^2)$$
 
 Ajuste y pronostico del modelo 4 
 
@@ -328,6 +299,7 @@ yhatmodelo1 <- modelo1$fitted
 yhatmodelo2 <- modelo2$fitted
 yhatmodelo3 <- modelo3$fitted
 yhatmodelo4 <- modelo4$fitted
+
 ```
 
 
@@ -360,11 +332,78 @@ grid()
 
 
 
+Punto 2 a)
+
+
+```{r}
+acf(as.numeric(difdD12),ci.type="ma",lag.max=36,lwd=2,main="",cex.lab=0.5,cex.axis=0.5)
+title(main="ACF diferencia regular y estacional (d=D=1)",cex.main=0.5)
+abline(v=c(12,24,36),lty=2,col=2)
+
+
+pacf(as.numeric(difdD12),lag.max=36,lwd=2,main="",cex.lab=0.5,cex.axis=0.5)
+title(main="ACF diferencia regular y estacional (d=D=1)",cex.main=0.5)
+abline(v=c(12,24,36),lty=2,col=2)
+```
+
+
+Punto 2 b)
+
+
+```{r}
+auto.arima(yt,ic="aic",seasonal.test="ocsb")
+auto.arima(yt,ic="aic",seasonal.test="ch")
+auto.arima(yt,ic="aic",seasonal.test="seas")
+auto.arima(yt,ic="bic",seasonal.test="ocsb")
+auto.arima(yt,ic="bic",seasonal.test="ch")
+auto.arima(yt,ic="bic",seasonal.test="seas")
+```
 
 
 
+**Calculo de exp(C∗n(p)) en modelos ARIMA(p,d,q)(P,D,Q)[s]:**
 
 
+```{r}
+#Creando funci´on usuario crit.inf.resid() para calcular C*n(p)
+crit.inf.resid=function(residuales,n.par,AIC="TRUE"){
+  if(AIC=="TRUE"){
+    #Calcula AIC
+    CI=log(mean(residuales^2))+2*n.par/length(residuales)
+  }
+  if(AIC=="FALSE"){
+    #Calcula BIC
+    CI=log(mean(residuales^2))+n.par*log(length(residuales))/length(residuales)
+  }
+  CI
+}
+
+
+#Tome k igual al total de parametros del modelo, contando incluso la deriva cuando el modelo tenga este parametro
+#Si no transformo a Yt:
+
+k1 <- length(coef(modelo1)[coef(modelo1)!=0])
+AICmodelo1=exp(crit.inf.resid(residuales=residuals(modelo1),n.par=k1))
+BICmodelo1=exp(crit.inf.resid(residuales=residuals(modelo1),n.par=k1,AIC="FALSE"))
+
+
+k2 <- length(coef(modelo2)[coef(modelo2)!=0])
+AICmodelo2=exp(crit.inf.resid(residuales=residuals(modelo2),n.par=k2))
+BICmodelo2=exp(crit.inf.resid(residuales=residuals(modelo2),n.par=k2,AIC="FALSE"))
+
+
+k3 <- length(coef(modelo3)[coef(modelo3)!=0])
+AICmodelo3=exp(crit.inf.resid(residuales=residuals(modelo3),n.par=k3))
+BICmodelo3=exp(crit.inf.resid(residuales=residuals(modelo3),n.par=k3,AIC="FALSE"))
+
+
+k4 <- length(coef(modelo4)[coef(modelo4)!=0])
+AICmodelo4=exp(crit.inf.resid(residuales=residuals(modelo4),n.par=k4))
+BICmodelo4=exp(crit.inf.resid(residuales=residuals(modelo4),n.par=k4,AIC="FALSE"))
+
+```
+
+(Poner los AIC y BIC en forma de tabla)
 
 
 
