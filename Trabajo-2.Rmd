@@ -1,0 +1,1583 @@
+---
+title: "Trabajo 2- Estadística 3"
+author: "Cristina Mercedes Ortega Benavides"
+date: "18/5/2021"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 1. Introducción
+
+* Definición DANE del índice asignado (ecuación debidamente explicada) dando ejemplo interpretativo de sus valores
+
+* Definición del dominio o clasificación industrial al que está relacionada la serie. 
+
+* Resultados alcanzados en el trabajo 1
+
+- Cuáles modelos globales y locales que fueron propuestos (debe dar las ecuaciones teóricas)
+
+- Cuál es el mejor modelo global, qué logró explicar este modelo en relación a los patrones que fueron observados sobre la serie
+
+- Resultó mejor el ajuste y pronóstico global vs. lo local (cuál fue el mejor local entre Holt-Winters y combinación del filtro de la descomposición con loess) y por qué.
+
+# 2. Análisis descriptivo de la serie, modelo global asignado y sus resultados:
+
+a) Presente y analice brevemente la gráfica de la serie (y su logaritmo natural si la serie es multiplicativa)
+indicando los patrones observables de tendencia, estacionalidad, varianza, ciclos. Grafique y analice además
+la ACF de la serie (para el caso multiplicativo sólo presente y analice la ACF del logaritmo natural) y concluya en términos de estacionariedad o no y por qué, contrastando con lo que a partir de la gráfica de la serie se concluye al respecto.
+
+```{r}
+Datos20=read.table("anex-EMMET-dic2019-Fabricacion de otros productos quimicos (1).csv",header=T,sep=";",skip=14,dec=",",colClasses=c(rep("NULL",4),"numeric",rep("NULL",6)))
+
+Datos20=ts(Datos20,freq=12,start=c(2001,1))
+```
+
+# #d8576b
+
+```{r, fig.height=5, fig.width=6}
+plot(Datos20, lwd=2, xlab="Tiempo", ylab = "Producción nominal", col = '#717D7E')
+grid()
+title(sub= '(a)')
+# title(main = "Índice de producción nominal \n del sector manufacturero (Colombia) \n", 
+#       sub = 'Clase industria: Otros productos químicos')
+```
+```{r}
+# Dispositivo JPEG
+jpeg(filename="Grafico3.jpeg",   # Nombre del archivo y extension
+     width = 20,    # Anchura
+     height = 20,   # Altura
+     res= 100,       # Resolucion 72ppi es un estandar
+     units = "cm")  # Unidades.
+
+plot(Datos20, lwd=2, xlab="Tiempo", ylab = "Producción nominal", col = "#d8576b")
+grid()
+title(sub= '(a)')
+
+# Cerramos el dispositivo 
+dev.off()
+
+```
+
+
+```{r}
+require(forecast)
+library(fANCOVA)
+```
+
+
+```{r, fig.height=5, fig.width=6}
+par(bg='gray98')
+acf(Datos20,lag.max=36,ci.type="ma",col="cyan4", ci.col=2, lwd=2, main = 'Procucción nominal')
+grid()
+```
+
+
+b) Para el modelo de regresión global señalado en la Tabla 1
+
+* la ecuación teórica con sus supuestos 
+
+$$\text{Modelo cuadrático estacional con indicadoras, mes de referencia diciembre}\\
+Y_t=\beta_0+\beta_1t+\beta_2t^2+\sum_{i=1}^{11}\delta_iI_{i,t}+E_t, ~~~ \{E_t\}_{t\in Z^+} \text{un RB} \sim N(0, \sigma^2)$$
+
+
+
+* con la estrategia de validación cruzada usando la misma longitud n = 216 de ajuste del trabajo anterior ajuste nuevamente este modelo y reporte los resultados de ajuste
+
+```{r}
+m <- 12 # numero de periodos a pronosticar dentro de la muestra
+n <-length(Datos20)-m # tamaño de la muestra para el ajuste
+t <- 1:n #Indice de tiempo en los periodos de ajuste
+t2 <- t^2
+
+# Datos para el ajuste:
+
+yt <- ts(Datos20[t], frequency = 12, start=c(2001, 1))
+
+# Creación de las variables indicadoras para los datos de muestra
+
+mes <- seasonaldummy(yt) #Matriz con las 11 primeras variables Indicadoras mes
+
+#Separando una a una las 11 variables indicadoras
+
+I1 <- mes[,1]
+I2 <- mes[,2]
+I3 <- mes[,3]
+I4 <- mes[,4]
+I5 <- mes[,5]
+I6 <- mes[,6]
+I7 <- mes[,7]
+I8 <- mes[,8]
+I9 <- mes[,9]
+I10 <- mes[,10]
+I11 <- mes[,11]
+
+# Creación de las variables indicadoras para los datos de validación cruzada
+
+tnuevo <- (n+1):length(Datos20)
+ytnuevo <- ts(Datos20[tnuevo], frequency = 12, start = c(2019, 1))
+
+mesnuevo <- seasonaldummy(yt, h=12)
+#Separando una a una las 11 indicadoras para los tiempos de pron?stico
+I1n=mesnuevo[,1]
+I2n=mesnuevo[,2]
+I3n=mesnuevo[,3]
+I4n=mesnuevo[,4]
+I5n=mesnuevo[,5]
+I6n=mesnuevo[,6]
+I7n=mesnuevo[,7]
+I8n=mesnuevo[,8]
+I9n=mesnuevo[,9]
+I10n=mesnuevo[,10]
+I11n=mesnuevo[,11]
+
+## Ajuste del Modelo cuadrático estacional con indicadoras
+
+mod1 <- lm(yt~t+I(t^2)+I1+I2+I3+I4+I5+I6+I7+I8+I9+I10+I11)
+```
+
+
+- tabla de parámetros estimados
+
+$$\begin{array}{| c | c | c | c| c |}
+\hline
+Parametro&Estimación&Error~Estándar&T_0&P(|T_{202}|>|T_0|)\\
+\hline
+\beta_0&35.8242551&1.2250562&29.242949&0.0000000\\
+\beta_1&0.1319807&0.0174478&7.564309&0.0000000\\
+\beta_2&0.0007051&0.0000779&9.055350&0.0000000\\
+\delta_1&-3.1817818&1.3273503&-2.397093&0.0174368\\
+\delta_2&5.3069465&1.3272009&3.998601&0.0000893\\
+\delta_3&12.0220423&1.3270660&9.059114&0.0000000\\
+\delta_4&7.2690612&1.3269454&5.478041&0.0000001\\
+\delta_5&12.1146698&1.3268389&9.130475&0.0000000\\
+\delta_6&9.8255350&1.3267465&7.405736&0.0000000\\
+\delta_7&8.4294343&1.3266681&6.353838&0.0000000\\
+\delta_8&9.0930346&1.3266037&6.854372&0.0000000\\
+\delta_9&12.5163357&1.3265533&9.435230&0.0000000\\
+\delta_{10}&10.5493377&1.3265171&7.952659&0.0000000\\
+\delta_{11}&8.9475962&1.3264952&6.745291&0.0000000\\
+\hline
+\end{array}$$
+
+```{r}
+summary(mod1)
+```
+
+
+```{r}
+require(kableExtra)
+
+require(broom)
+
+# tidy(summary(mod1)) %>% 
+#   kbl() %>% 
+#   kable_classic()
+
+```
+
+
+- medidas de ajuste
+
+```{r}
+# Calculo del AIC y BIC
+
+#Creando funci?n usuario crit.inf.resid() para calcular C^*_n(p)
+crit.inf.resid <- function(residuales,n.par,AIC="TRUE"){
+if(AIC=="TRUE"){
+#Calcula AIC
+CI=log(mean(residuales^2))+2*n.par/length(residuales)
+}
+if(AIC=="FALSE"){
+#Calcula BIC
+CI=log(mean(residuales^2))+n.par*log(length(residuales))/length(residuales)
+}
+CI
+}  
+```
+
+modelo 1
+```{r}
+resmod1.orig <- residuals(mod1) #seudo-residuos en la escala original. Usados solo para calcular AIC y BIC
+
+npar1 <- length(coef(mod1)[coef(mod1)!=0]) #numero parametros modelo 1
+
+AIC1 <- exp(crit.inf.resid(resmod1.orig,n.par=npar1))
+BIC1 <- exp(crit.inf.resid(resmod1.orig ,n.par=npar1, AIC="FALSE"))
+```
+
+$$\begin{array}{| c | c | c |}
+\hline
+p&AIC&BIC\\
+\hline
+14&16.85948&20.98234\\
+\hline
+\end{array}$$
+
+- gráfico del ajuste
+
+# Valores ajustados de los modelos 
+
+```{r}
+mod1_ajust <- ts(fitted(mod1), start  = c(2001,1), frequency = 12)
+```
+
+
+```{r, fig.height=5, fig.width=6}
+plot(Datos20, ylab = 'Producción nominal', xlab = 'Tiempo', col = '#717D7E', lwd = 2)
+lines(mod1_ajust, col='#3498DB', lwd=2)
+legend("topleft", legend = c("Original", "Ajuste modelo global"), lty=1, col=c('#717D7E', '#3498DB'))
+grid()
+```
+
+
+
+* pronósticos
+
+- Ecuación de pronóstico
+
+$$
+\hat{Y}_{216}(L) \approx 35.8242551 + 0.1319807 (216+L) + 0.0007051 (216+L)^2	\\ 
+- 3.1817818 I_{1,216+L} + 5.3069465 I_{2,216+L} + 12.0220423 I_{3,216+L} + 7.2690612 I_{4,216+L} + 12.1146698 I_{5,216+L} \\ + 9.8255350 I_{6,216+L} + 8.4294343 I_{7,216+L} + 9.0930346 I_{8,216+L}+ 12.5163357 I_{9,216+L}+ 10.5493377 I_{10,216+L}+ 8.9475962 I_{11,216+L}
+$$
+```{r}
+ytpron1 <- predict(mod1, newdata=data.frame(t=tnuevo, I1=I1n, I2=I2n, I3=I3n, I4=I4n, I5=I5n, I6=I6n, I7=I7n, I8=I8n, I9=I9n, I10=I10n, I11=I11n), interval="prediction")
+ytpron1 <- ts(ytpron1,freq=12,start=c(2019,1))
+ytpron1
+```
+
+
+
+- la tabla de pronósticos
+
+$$\begin{array}{| c | c | c | c| c |}
+\hline
+Periodo&L&Pronósticos&Lim.Inf&Lim.Sup\\
+\hline
+Ene~2019&1&94.4852&86.27520&102.6952\\
+Feb~2019&2&103.4126&95.19741&111.6279\\
+Mar~2019&3&110.5678&102.34725&118.7884\\
+Abr~2019&4&106.2564&98.03028&114.4825\\
+May~2019&5&111.5449&103.31316&119.7767\\
+Jun~2019&6&109.7001&101.46257&117.9377\\
+Jul~2019&7&108.7498&100.50627&116.9933\\
+Ago~2019&8&109.8606&101.61094&118.1102\\
+Sep~2019&9&113.7324&105.47658&121.9883\\
+Oct~2019&10&112.2154&103.95319&120.4777\\
+Nov~2019&11&111.0651&102.79632&119.3338\\
+Dic~2019&12&102.5703&94.29486&110.8457\\
+\hline
+\end{array}$$
+
+- medidas de cobertura amplitud media de los I.P y medidas MAE, MAPE y RMSE 
+
+$$\begin{array}{| c | c | c | c| c |}
+\hline
+RMSE & MAE & MAPE & Amplitud & Cobertura\\
+\hline
+3.153708&2.366654&2.338060&16.48278&100\\
+\hline
+\end{array}$$
+
+* Conclusión breve sobre la calidad del ajuste y de los pronósticos con este modelo
+
+
+* Gráfica de pronóstico
+
+```{r, fig.height=5, fig.width=6}
+plot(ytnuevo,lwd=2, col="#717D7E", type="b", pch=1, xlab="Periodo del año", ylab="")
+lines(ytpron1[,1],lwd=2, col="purple", type="b", pch=2)
+grid()
+legend("bottomright",legend=c("Real","Pronóstico del modelo global"),col=c("#717D7E","purple"),lwd=2, pch=1:2, cex=0.8)
+
+```
+
+
+# 3. Evaluación de supuesto de ruido blanco e identificación de procesos estocásticos sobre los errores estructurales del modelo global
+
+a) Validación de supuestos: Guarde los residuos estructurales $\hat{E}_t$ en la escala en que ajustó la serie. Analice inicialmente las gráficas de estos residuales en términos de los supuestos sobre los errores Et de media constante en cero, varianza constante y determine si hay ciclos evidentes no explicados o rachas en signos ±, qué concluye frente a la existencia de estos patrones. 
+
+```{r}
+residuales <- residuals(mod1)
+residuales <- ts(residuales,freq=12,start=c(2001,1))
+```
+
+```{r, fig.height=5, fig.width=6}
+plot(residuales, type = "l", xlab = 'Tiempo', ylab = 'Residuales', col = '#01588A', lwd = 1)
+abline(h=c(-2*summary(mod1)$sigma, 0, 2*summary(mod1)$sigma), col=2)
+abline(h = 0, col=2)
+grid()
+legend("bottomright", legend = "Modelo Global", lty = 1, col = '#01588A')
+
+plot(as.numeric(mod1$fitted),residuales, xlab = 'Valores Ajustados', ylab = 'Residuales',col = "#01588A")
+abline(h=0)
+abline(h=c(-2*summary(mod1)$sigma,2*summary(mod1)$sigma), col = 2)
+grid()
+legend("bottomright", legend = "Modelo Global", lty = 1, col = '#01588A')
+```
+
+Realice las Pruebas de incorrelación con: 
+
+- Ljung-Box 
+
+> Prueba de hipótesis
+
+$$H_0 : \rho(1) = \rho(2) = \rho(3) = \ldots = \rho(m) = 0 $$
+$$H_1: \rho(k) \neq 0, \text{ para al menos un } k= 1, 2, … , m$$
+
+> Estadístico de prueba
+
+$$Q_{LB} = 216 (216+2) \sum_{k=L}^m \frac{\widehat{\rho^2}(k)}{216-k} \sim \text{aprox } \chi^2_m$$
+
+
+```{r}
+#DEFINIENDO FUNCION USUARIO PARA TESTES BOX-PIERCE Y LJUNG-BOX
+BP.LB.test=function(serie,maxlag,type="Box"){
+aux=floor(maxlag/6); X.squared=c(rep(NA,aux))
+df=c(rep(NA,aux)); p.value=c(rep(NA,aux))
+for(i in 1:aux){
+test=Box.test(serie,lag=(6*i),type=type)
+X.squared[i]=test[[1]]; df[i]=test[[2]]
+p.value[i]=test[[3]]
+}
+lag=6*c(1:aux)
+teste=as.data.frame(cbind(X.squared,df,p.value))
+rownames(teste)=lag; teste
+}
+
+LB_result <- BP.LB.test(residuals(mod1),maxlag=36,type="Ljung")
+
+
+# cbind("m" = seq(6, 36, 6), LB_result)  %>% 
+#   kbl(col.names = c('$m$', '$Q_{LB}$', '$gl$', '$p(χ^2_{m} > Q_{LB})$'), row.names = F) %>% 
+#   kable_classic(full_width = F) 
+
+```
+
+```{r}
+xtable::xtable(LB_result)
+```
+
+$$\begin{array}{cccc}
+  \hline
+m & Q_{LB} & gl & p(\chi^2_{m} > Q_{LB}) \\ 
+  \hline
+6 & 161.91 & 6.00 & 0.00 \\ 
+  12 & 196.24 & 12.00 & 0.00 \\ 
+  18 & 216.31 & 18.00 & 0.00 \\ 
+  24 & 259.14 & 24.00 & 0.00 \\ 
+  30 & 315.97 & 30.00 & 0.00 \\ 
+  36 & 385.48 & 36.00 & 0.00 \\ 
+   \hline
+\end{array}$$
+
+- Durbin-Watson
+
+```{r}
+require(car)
+#DEFINIENDO FUNCION USUARIO PARA TEST DURBIN-WATSON
+pruebaDW1=function(modelo){
+dwneg=durbinWatsonTest(modelo,max.lag=1,method="normal",alternative="negative")
+dwpos=durbinWatsonTest(modelo,max.lag=1,method="normal",alternative="positive")
+
+res=data.frame(1,dwneg$r,dwneg$dw,dwpos$p,dwneg$p)
+names(res)=c("lag","rho estimado","Estadístico D-W",
+"VP rho>0","VP rho<0")
+res
+}
+
+# pruebaDW1(mod1) 
+
+
+# xtable::xtable(pruebaDW1(mod1))
+
+```
+
+
+
+$$
+\begin{array}{cccccc}
+  \hline
+ & k & \widehat{\rho}(1) & \text{Estadístico } d_1 & P(DW_1 < d1) & P(DW_1 > d1) \\ 
+  \hline
+ & 1 & 0.41 & 1.17 & 0.00 & 1.00 \\ 
+   \hline
+\end{array}
+$$
+
+> Modelo Durbin Watson
+
+$$\text{Modelo Durbin Watson}\\
+Y_t=  \sum_{j=1}^2 \beta_jt^j+\sum_{i=1}^{11}\delta_iI_{i,t}+E_t, \text{ con } E_t = \phi_1E_{t-1} + a_t$$
+
+$$|\phi_1|<1  \text{ y }  \{a_t\}_{t\in Z^+} \text{un RB} \sim N(0, \sigma_a^2)$$
+* Como $d_1 < 2$, por lo tanto el test a realizar es:
+
+$$H_0: \rho(1) = corr(E_t, E_{t+1}) = \phi_1 = 0 \text{ vs } H_1: \rho(1) = corr(E_t, E_{t+1}) > 0$$
+* El valor p es: $P(DW_1 < d1) \approx 0$, conduce al rechazo de $H_0$ en favor de $H_1$, por tanto en los dos modelos $\{E_t\}_{t \in Z^+}$ no es R.B pues presenta autocorrelación de orden 1 positiva.
+
+
+
+
+- gráficas de la ACF y PACF con bandas de Bartlett.
+
+```{r, fig.height=5, fig.width=6}
+acf(residuales,lag.max=36,ci.type="ma",col="cyan4",ci.col=2, lwd=2, main = 'ACF de los residuales')
+```
+
+```{r, fig.height=5, fig.width=6}
+pacf(residuales,lag.max=36,col="cyan4",ci.col=2, lwd=2, main = 'PACF de los residuales')
+```
+
+Concluya sobre si los errores estructurales Et son ruido blanco o no y en este último caso, evalúe si por lo menos son estacionarios con media cero.
+
+
+
+#######################################################################################
+
+Jennifer....
+
+Identificando modelos ARMA
+
+```{r}
+library(forecast)
+library(FitAR)
+library(TSA)
+```
+
+
+
+Análisis de ACF  
+
+```{r, fig.height=5, fig.width=6}
+acf(residuales,lag.max=36,ci.type="ma",col="cyan4",ci.col=2, lwd=2, main = 'ACF de los residuales')
+```
+
+Opiniones:
+
+Juan Esteban: tiene patrón tipo corte, con corte en q = 6
+Cristina: tiene patrón tipo cola
+Jennifer: tiene patrón tipo corte, con corte en q=6 o 9
+Miguel: tiene patrón tipo cola
+
+Análisis de PACF
+
+```{r, fig.height=5, fig.width=6}
+pacf(residuales,lag.max=36,col="cyan4",ci.col=2, lwd=2, main = 'PACF de los residuales')
+```
+
+Juan Esteban: Patrón tipo cola 
+Cristina: Patrón tipo cola
+Jennifer: Patrón tipo cola (Exponencial sinusoidal)
+Miguel: Patrón tipo corte
+
+
+Análisis de EACF
+
+```{r}
+eacf(residuales,ar.max=36,ma.max=36)
+```
+
+Juan Esteban: ARMA(4,7)
+Cristina: ARMA(4,7)
+Jennifer: ARMA(4,7)
+Miguel: ARMA(4,7)
+
+(Colocar el modelo de un ARMA (4,7))
+
+
+$$E_t = \sum_{j=1}^{4} \phi_j E_{t-j} + a_t + \sum_{i=1}^{7} \theta_i a_{t-i}, ~~con~  \{a_t\}_{t\in Z^+} \text{un RB} \sim N(0, \sigma_a^2)$$
+
+Análisis con SelectModel()
+
+```{r}
+library(FitAR)
+SelectModel(residuales, lag.max = 36,  Criterion="AIC")
+SelectModel(residuales, lag.max = 36,  Criterion="BIC")
+```
+
+Se identifican los siguientes modelos para $E_t$:
+
+Por AIC: 
+
+El mejor modelo es un AR(16): 
+
+$$E_t = \sum_{j=1}^{16} \phi_i E_{t-j} + a_t,  ~ con~ \{a_t\}_{t \in Z^+} ~ un ~ R.B \sim N(0, \sigma^2_a) $$
+
+El segundo mejor modelo es un AR(18):
+
+$$E_t = \sum_{j=1}^{18} \phi_i E_{t-j} + a_t,  ~ con~ \{a_t\}_{t \in Z^+} ~ un ~ R.B \sim N(0, \sigma^2_a)$$
+
+y el tercer mejor modelo es un AR(17):
+
+$$E_t = \sum_{j=1}^{17} \phi_i E_{t-j} + a_t,  ~ con~ \{a_t\}_{t \in Z^+} ~ un ~ R.B \sim N(0, \sigma^2_a)$$
+
+
+Por BIC: 
+
+El mejor modelo es un AR(3): 
+
+$$E_t = \sum_{j=1}^{3} \phi_i E_{t-j} + a_t,  ~ con~ \{a_t\}_{t \in Z^+} ~ un ~ R.B \sim N(0, \sigma^2_a)$$
+
+El segundo mejor modelo es un AR(4):
+
+$$E_t = \sum_{j=1}^{4} \phi_i E_{t-j} + a_t,  ~ con~ \{a_t\}_{t \in Z^+} ~ un ~ R.B \sim N(0, \sigma^2_a)$$
+
+y el tercer mejor modelo es un AR(2):
+
+$$E_t = \sum_{j=1}^{2} \phi_i E_{t-j} + a_t,  ~ con~ \{a_t\}_{t \in Z^+} ~ un ~ R.B \sim N(0, \sigma^2_a)$$
+
+
+
+Análisis con auto.arima()
+
+
+```{r}
+library(forecast)
+
+SerieEt <- ts(residuales,freq=12,start=c(2001,1))
+
+auto.arima(residuales, ic="aic")
+auto.arima(residuales, ic="bic")
+auto.arima(SerieEt, ic="aic")
+auto.arima(SerieEt, ic="bic")
+```
+
+Se identifica el mismo modelo en todos los casos, según los criterios AIC y BIC y con el vector de residuales sin fechas y con fechas:
+
+$E_t$ es un ARIMA(1,0,2)=ARMA(1,2) estacionario y de media cero, entonces:
+
+
+$$E_t=\phi_1E_{t-1}+a_t+\theta_1 a_{t-1}+\theta_2 a_{t-2} ~~ con \{a_t\}_{t \in Z^+} un ~R.B \sim N(0, \sigma^2_a) $$
+
+Análisis con armasubsets()
+
+
+```{r}
+library(TSA)
+armasubsets(residuales, nar = 24, nma =24,  ar.method="ml")
+```
+
+
+```{r}
+plot(armasubsets(residuals(mod1),nar=24,nma=24,y.name='AR',ar.method='ml'))
+```
+
+
+Renglón 1: 
+
+$$E_t= \phi_1E_{t-1}+\phi_2E_{t-2}+\phi_3E_{t-3}+\phi_{11}E_{t-11}+\phi_{16}E_{t-16}+a_t+\theta_{16}a_{t-16}+\theta_{17}a_{t-17}$$
+
+$$con~ \{a_t\}_{t \in Z^+} ~ un ~ R.B \sim N(0, \sigma^2_a)$$
+
+$$es ~ decir~, ~E_t~ es~ un ~ARMA(16,17)~ pero~sólo~ , \phi_{1}, \phi_{2}, \phi_{3}, \phi_{11}, \phi_{16}, \theta_{16} ~y~ \theta_{17} ~van ~en ~el ~modelo.$$
+
+
+
+
+## Sobre ajustes, validación supuestos y pronósticos en R de modelos de regresión con errores ARMA
+
+Funciones de usuario:
+
+```{r}
+library(forecast);library(lmtest)
+#Creando función usuario crit.inf.resid() para calcular C*n(p)
+crit.inf.resid=function(residuales,n.par,AIC="TRUE"){
+if(AIC=="TRUE"){
+#Calcula AIC
+CI=log(mean(residuales^2))+2*n.par/length(residuales)
+}
+if(AIC=="FALSE"){
+#Calcula BIC
+CI=log(mean(residuales^2))+n.par*log(length(residuales))/length(residuales)
+}
+CI
+}
+#DEFINIENDO FUNCIÓN USUARIO PARA TEST LJUNG-BOX
+BP.LB.test=function(serie,maxlag,type="Box"){
+aux=floor(maxlag/6); X.squared=c(rep(NA,aux))
+df=c(rep(NA,aux)); p.value=c(rep(NA,aux))
+for(i in 1:aux){
+test=Box.test(serie,lag=(6*i),type=type)
+X.squared[i]=test[[1]]; df[i]=test[[2]]
+p.value[i]=test[[3]]
+}
+lag=6*c(1:aux)
+teste=as.data.frame(cbind(X.squared,df,p.value))
+rownames(teste)=lag; teste
+}
+#Función para calcular la amplitud de los I.P
+amplitud=function(LIP,LSP){
+a=LSP-LIP
+am=mean(a)
+am
+}
+#Función para calcular la cobertura de los I.P
+cobertura=function(real,LIP,LSP){
+I=ifelse(real>=LIP & real<=LSP,1,0)
+p=mean(I)
+p
+}
+```
+
+
+# Modelos lineales en los parámetros de tendencia y estacionalidad, y errores ARMA(p,q) con todos los parámetros.
+
+## Modelo 1
+
+
+$$ Y_t=\beta_0+\beta_1t+\beta_2t^2+\sum_{i=1}^{11}\delta_iI_{i,t}+E_t, ~~ donde ~~ E_t = \sum_{j=1}^{16} \phi_j E_{t-j} + a_t, ~~con~  \{a_t\}_{t\in Z^+} \text{un RB} \sim N(0, \sigma_a^2) $$
+
+## Modelo 2
+
+$$ Y_t=\beta_0+\beta_1t+\beta_2t^2+\sum_{i=1}^{11}\delta_iI_{i,t}+E_t, ~~ donde ~~ E_t = \sum_{j=1}^{4} \phi_j E_{t-j} + a_t + \sum_{i=1}^{7} \theta_i a_{t-i}, ~~con~  \{a_t\}_{t\in Z^+} \text{un RB} \sim N(0, \sigma_a^2) $$
+
+
+
+
+* Paso 1) 
+
+Lea datos y defina variables necesarias para el ajuste y el pronóstico (en este ejemplo se asumen 12 pronósticos ex – post):
+
+Este paso ya se hizo arriba también
+
+```{r}
+# Lectura de los datos
+datos=read.table("anex-EMMET-dic2019-Fabricacion de otros productos quimicos (1).csv",header=T,sep=";",skip=14,dec=",",colClasses=c(rep("NULL",4),"numeric",rep("NULL",6)))
+
+
+datos=ts(datos,freq=12,start=c(2001,1))
+
+n=length(datos)-12 
+
+t=1:n
+t2=t^2
+
+yt=ts(datos[t],freq=12,start=c(2001,1)) #serie recortada
+
+
+#Defina la matriz de variables indicadoras
+Indicadoras=seasonaldummy(yt)
+
+X=cbind(t,t2,Indicadoras)
+
+#Definiendo variables para pronósticos
+tnuevo=(n+1):length(datos)
+t2nuevo=tnuevo^2
+Indicadorasnuevo=seasonaldummy(yt,h=12) 
+
+Xnuevo=cbind(t=tnuevo,t2=t2nuevo,Indicadoras=Indicadorasnuevo) #matriz predictores en el pronóstico
+ytf=ts(datos[tnuevo],freq=12,start=c(2019,1)) 
+```
+
+
+
+* Paso 2) ajuste con validación cruzada) ajuste con validación cruzada
+
+Ajuste el modelo con función Arima de librería forecast
+
+
+```{r}
+#indique el valor correspondiente a p y q en la función Arima, así como la matriz de predictores X en xreg=X
+
+modelo1<- Arima(yt,order=c(16,0,0),xreg=X,method="ML")
+modelo2 <- Arima(yt,order=c(4,0,7),xreg=X,method="ML")  
+```
+
+
+* Paso 3) Tabla de parametros estimados
+
+Construya tabla completa de parámetros estimados, valores P corresponden a $𝑃(|𝑡_{n-k}| > |𝑇_0|)$, con $𝑘$ la suma del número de parámetros en las estructuras de tendencia, estacionalidad y errores ARMA.
+
+
+Asociado al modelo1
+
+```{r}
+k1=length(coef(modelo1)[coef(modelo1)!=0])
+k1 #número de parámetros del modelo
+dfmodelo1=n-k1 # grados de libertad del MSE del modelo
+#Construya tabla de parámetros estimados con estadísticos T0 y valores P para cada parámetro
+coeftest(modelo1,df=dfmodelo1)
+```
+
+$$
+\begin{array}{| c | c | c | c| c |}
+\hline
+Parametros&Estimación&s.e&Valor~T_0&P(|t_{30}|> |T_0|)\\
+\hline
+\phi_1&0.20883541&0.06612159&3.1584&0.0018518\\
+\phi_2&0.36294255&0.06772851&5.3588&2.459 \times 10^{-7}\\
+\phi_3&0.18179268&0.07201827&2.5243&0.0124306\\
+\phi_4&-0.18551157&0.07395953&-2.5083&0.0129871\\
+\phi_5&-0.00220964&0.07459878&-0.0296&0.9764017\\
+\phi_6&0.17680679&0.07448358&2.3738&0.0186265\\
+\phi_7&-0.01723501&0.07533392&-0.2288&0.8192901\\
+\phi_8&-0.16549198&0.07569984&-2.1862&0.0300525\\
+\phi_9&0.13389535&0.07476980&1.7908&0.0749568\\
+\phi_{10}&0.01164786&0.07659164&0.1521&0.8792907\\
+\phi_{11}&0.10943003&0.07521055&1.4550&0.1473597\\
+\phi_{12}&-0.03479529&0.07626706&-0.4562&0.6487572\\
+\phi_{13}&0.08012208&0.07622740&1.0511&0.2945796\\
+\phi_{14}&0.07065787&0.07506007&0.9414&0.3477460\\
+\phi_{15}&-0.06275582&0.07239000&-0.8669&0.3871067\\
+\phi_{16}&-0.25884453&0.07144333&-3.6231&0.0003755\\
+\beta_0&35.80275224&1.81258848&19.7523&<2.2 \times 10^{-16}\\
+\beta_1&0.13282184&0.03425616&3.8773&0.0001464\\
+\beta_2&0.00070518&0.00017176&4.1056&6.033 \times 10^{-5}\\
+\delta_1&-3.35642614&0.95012883&-3.5326&0.0005190\\
+\delta_2&4.92492708&1.09257560&4.5076&1.157 \times 10^{-5}\\
+\delta_3&11.62982569&1.23545763&9.4134&<2.2 \times 10^{-16}\\
+\delta_4&7.08753911&1.51287395&4.6848&5.397 \times 10^{-6}\\
+\delta_5&11.90175812&1.56332054&7.6131&1.305 \times 10^{-12}\\
+\delta_6&9.67442937&1.54905786&6.2454&2.803 \times 10^{-9}\\
+\delta_7&8.45115846&1.54688824&5.4633&1.485 \times 10^{-7}\\
+\delta_8&9.08567647&1.49364257&6.0829&6.573 \times 10^{-9}\\
+\delta_9&12.60700269&1.20682578&10.4464&<2.2 \times 10^{-16}\\
+\delta_{10}&10.73940310&1.06267664&10.1060&<2.2 \times 10^{-16}\\
+\delta_{11}&9.13567910&0.93967858&9.7221&<2.2 \times 10^{-16}\\
+\hline
+\end{array}
+$$
+
+
+
+
+
+
+Asociado al modelo2
+
+```{r}
+k2=length(coef(modelo2)[coef(modelo2)!=0])
+k2 #número de parámetros del modelo
+dfmodelo2=n-k2 # grados de libertad del MSE del modelo
+#Construya tabla de parámetros estimados con estadísticos T0 y valores P para cada parámetro
+coeftest(modelo2,df=dfmodelo2)
+```
+
+
+$$
+\begin{array}{| c | c | c | c| c |}
+\hline
+\text{Parámetros} & \text{Estimación} & \text{s.e} & \text{Valor}~ T_0 & Pr(|t_{25}|>|T_0|)\\   
+\hline
+\phi_1&0.80947258&NA&NA&NA\\
+\phi_2&0.29235544&0.01026309&28.4861&<2.2\times 10^{-16}\\
+\phi_3&0.83574608&NA&NA&NA\\
+\phi_4&-0.97718738&NA&NA&NA\\
+\theta_1&-0.59772261&0.06709379&-8.9088&4.065\times 10^{-16}\\
+\theta_2&-0.02379023&0.08160986&-0.2915&0.7709763\\
+\theta_3&-1.02530097&0.07680444&-13.3495&<2.2\times 10^{-16}\\
+\theta_4&0.57191671&0.09730590&5.8775&1.826\times 10^{-8}\\
+\theta_5&-0.20868520&0.07856194&-2.6563&0.0085680\\
+\theta_6&0.22507922&0.07274955&3.0939&0.0022720\\
+\theta_7&0.13881142&0.05502861&2.5225&0.0124675\\
+\beta_0&35.99379105&1.43669891&25.0531&<2.2\times 10^{-16}\\
+\beta_1&0.12877214&0.02697057&4.7745&3.576\times 10^{-6}\\
+\beta_2&0.00072343&0.00013334&5.4253&1.739\times 10^{-7}\\
+\delta_1&-3.27798205&0.91813662&-3.5703&0.0004512\\
+\delta_2&5.02550149&0.86035968&5.8412&2.198\times 10^{-8}\\
+\delta_3&11.88902816&0.98219018&12.1046&<2.2\times 10^{-16}\\
+\delta_4&7.15108063&1.04325015&6.8546&9.605\times 10^{-11}\\
+\delta_5&11.96952023&1.04432641&11.4615&<2.2\times 10^{-16}\\
+\delta_6&9.77802126&1.04466000&9.3600&<2.2\times 10^{-16}\\
+\delta_7&8.31967279&1.04168471&7.9867&1.270\times 10^{-13}\\
+\delta_8&8.97756347&1.04341624&8.6040&2.795\times 10^{-15}\\
+\delta_9&12.52774437&0.97607053&12.8349&<2.2\times 10^{-16}\\
+\delta_{10}&10.49509424&0.84641864&12.3994&<2.2\times 10^{-16}\\
+\delta_{11}&8.87948093&0.91245714&9.7314&<2.2\times 10^{-16}\\
+
+\hline
+\end{array}
+$$
+
+* Paso 4) grafico de ajuste
+
+Obtenga gráfica del ajuste de la serie y de los residuales de ajuste $a_t$
+
+Para el modelo 1 
+```{r, fig.height=5, fig.width=6}
+#Gráfico de la serie y su ajuste
+ythat1=modelo1$fitted #Este objeto ya tiene fechas
+plot(datos, col = "#717D7E", lwd=2)
+lines(ythat1,col="#3498DB", lwd=2)
+grid()
+legend("topleft",legend=c("Original","Ajuste modelo 1"),lty=1,col= c("#717D7E", "#3498DB"))
+
+#Gráficos de residuales
+plot(residuals(modelo1), xlab = "Tiempo", ylab = "Residuales", col = "#01588A")
+abline(h=0)
+abline(h=c(-2*sqrt(modelo1$sigma2),2*sqrt(modelo1$sigma2)),lty=1, col=2)
+grid()
+legend("bottomright", legend = "Modelo 1", col = "#01588A", lty = 1)
+plot(as.numeric(modelo1$fitted),xlab = "Valores ajustados", ylab = "Residuales", residuals(modelo1), col = "#01588A")
+abline(h=0)
+abline(h=c(-2*sqrt(modelo1$sigma2),2*sqrt(modelo1$sigma2)),lty=1, col=2)
+grid()
+legend("bottomright", legend = "Modelo 1", col = "#01588A",lty = 1)
+```
+
+
+
+Para el modelo 2
+
+```{r, fig.height=5, fig.width=6}
+#Gráfico de la serie y su ajuste
+ythat2=modelo2$fitted #Este objeto ya tiene fechas
+plot(datos, col = "#717D7E", lwd=2)
+lines(ythat2,col="#3498DB", lwd=2)
+grid()
+legend("topleft",legend=c("Original","Ajuste modelo 2"),lty=1,col=c("#717D7E", "#3498DB"))
+
+#Gráficos de residuales
+plot(residuals(modelo2), xlab = "Tiempo", ylab = "Residuales",col = "#01588A")
+abline(h=0)
+abline(h=c(-2*sqrt(modelo2$sigma2),2*sqrt(modelo2$sigma2)),lty=1, col=2)
+grid()
+legend("bottomright", legend = "Modelo 2", col = "#01588A", lty = 1)
+
+plot(as.numeric(modelo2$fitted),residuals(modelo2),xlab = "Valores Ajustados", ylab = "Residuales", col = "#01588A")
+abline(h=0)
+abline(h=c(-2*sqrt(modelo2$sigma2),2*sqrt(modelo2$sigma2)),lty=1, col = 2)
+grid()
+legend("bottomright", legend = "Modelo2", col = "#01588A", lty = 1)
+```
+
+
+* Paso 5)  Tabla de medidas de ajuste
+
+Cálculo de AIC y BIC, versión $exp(𝐶_n^∗ (𝑝))$ , con el número de parámetros $𝑘$ siendo la suma del número de parámetros en las estructuras de tendencia, estacionalidad y errores ARMA, previamente calculado en 3).
+
+Para el modelo 1
+
+```{r}
+AICmodelo1=exp(crit.inf.resid(residuales=residuals(modelo1),n.par=k1))
+BICmodelo1=exp(crit.inf.resid(residuales=residuals(modelo1),n.par=k1,AIC="FALSE"))
+
+AICmodelo1
+BICmodelo1
+```
+
+
+Para el modelo 2
+
+```{r}
+AICmodelo2=exp(crit.inf.resid(residuales=residuals(modelo2),n.par=k2))
+BICmodelo2=exp(crit.inf.resid(residuales=residuals(modelo2),n.par=k2,AIC="FALSE"))
+
+AICmodelo2
+BICmodelo2
+```
+
+* Paso 6)
+
+Valide supuestos sobre el error de ajuste $a_t$
+
+para el modelo 1 
+
+```{r, fig.height=5, fig.width=6}
+#ACF sobre residuales de ajuste en el modelo. Use valor para m el que se indica en la guía del trabajo
+
+acf(as.numeric(residuals(modelo1)),ci.type="ma",lag.max=36,main="ACF modelo1",ci.col=2, col="cyan4", lwd=2)
+
+#PACF sobre residuales de ajuste en el modelo. Use valor para m el que se indica en la guía del trabajo
+
+pacf(as.numeric(residuals(modelo1)),lag.max=36,main="PACF modelo1",ci.col=2, col="cyan4", lwd=2)
+
+BP.LB.test(residuals(modelo1),maxlag=36,type="Ljung") #test Ljung-Box use máximo m igual al de ACF y PACF
+
+#Normalidad sobre residuales de ajuste en el modelo. Sólo si no se rechaza supuesto de ruido blanco
+shapiro.test(residuals(modelo1))
+qqnorm(residuals(modelo1),main="Gráfico de normalidad residuos de ajuste modelo 1", col = "#01588A")
+qqline(residuals(modelo1),col=2)
+grid()
+```
+
+
+
+para el modelo 2 
+
+```{r, fig.height=5, fig.width=6}
+#ACF sobre residuales de ajuste en el modelo. Use valor para m el que se indica en la guía del trabajo
+acf(as.numeric(residuals(modelo2)),ci.type="ma",lag.max=36,main="ACF modelo2",ci.col=2, col="cyan4", lwd=2)
+
+#PACF sobre residuales de ajuste en el modelo. Use valor para m el que se indica en la guía del trabajo
+pacf(as.numeric(residuals(modelo2)),lag.max=36,main="PACF modelo2",ci.col=2, col="cyan4", lwd=2)
+
+
+BP.LB.test(residuals(modelo2),maxlag=36,type="Ljung") #test Ljung-Box use máximo m igual al de ACF y PACF
+
+#Normalidad sobre residuales de ajuste en el modelo. Sólo si no se rechaza supuesto de ruido blanco
+shapiro.test(residuals(modelo2))
+qqnorm(residuals(modelo2),main="Gráfico de normalidad residuos de ajuste modelo 2", col= "#01588A")
+qqline(residuals(modelo2),col=2)
+grid()
+```
+
+
+
+* Paso 7) 
+
+Pronósticos para la validación cruzada (en este ejemplo se asume 12 pronósticos ex – post)
+
+
+Para el modelo 1 
+
+```{r}
+predmodelo1=ts(as.data.frame(forecast(modelo1,xreg=Xnuevo,level=95)),freq=12, start=c(2019,1))
+predmodelo1
+ytpronmodelo1=predmodelo1[,1] #Tomando el pronóstico puntual. Este objeto tiene fechas
+
+#Medidas precisión pronósticos
+accuracy(ytpronmodelo1,ytf)
+amplitud(LIP=predmodelo1[,2],LSP=predmodelo1[,3])
+cobertura(real=ytf,LIP=predmodelo1[,2],LSP=predmodelo1[,3])
+```
+
+Para el modelo 2 
+
+```{r}
+predmodelo2=ts(as.data.frame(forecast(modelo2,xreg=Xnuevo,level=95)),freq=12, start=c(2019,1))
+predmodelo2
+ytpronmodelo2=predmodelo2[,1] #Tomando el pronóstico puntual. Este objeto tiene fechas
+
+#Medidas precisión pronósticos
+accuracy(ytpronmodelo2,ytf)
+amplitud(LIP=predmodelo2[,2],LSP=predmodelo2[,3])
+cobertura(real=ytf,LIP=predmodelo2[,2],LSP=predmodelo2[,3])
+```
+
+
+# Modelos lineales en los parámetros de tendencia y estacionalidad, y errores ARMA(p,q) con sólo alguno de los parámetros de esta estructura ARMA.
+
+## Modelo 3
+
+$$ Y_t=\beta_0+\beta_1t+\beta_2t^2+\sum_{i=1}^{11}\delta_iI_{i,t}+E_t, ~~ donde ~~ E_t= \phi_1E_{t-1}+\phi_2E_{t-2}+\phi_3E_{t-3}+\phi_{11}E_{t-11}+\phi_{16}E_{t-16}+a_t+\theta_{16}a_{t-16}+\theta_{17}a_{t-17}, ~~con~  \{a_t\}_{t\in Z^+} \text{un RB} \sim N(0, \sigma_a^2) $$
+
+El paso 1) no hay necesidad de repetirlo 
+
+
+Paso 2) ajuste con validación cruzada
+
+Ajuste el modelo con función Arima de librería forecast, además de hacer uso del argumento fixed indicando que parametros entran y cuales no 
+
+```{r}
+#indique el valor correspondiente a p y q en la función Arima, así como la matriz de predictores X en xreg=X y
+#el vector para argumento fixed
+modelo3 <- Arima(yt,order=c(16,0,17),xreg=X, fixed=c(rep(NA,3), rep(0,7), NA, rep(0,4), NA, rep(0,15), NA, NA,rep(NA,14)),  method="ML")
+```
+
+
+
+Paso 3)
+
+Construya tabla completa de parámetros estimados, valores P
+
+
+```{r}
+#Calcule grados de libertad del MSE del modelo
+k3=length(coef(modelo3)[coef(modelo3)!=0])
+k3 #número de parámetros del modelo
+dfmodelo3=n-k3
+#Construya tabla de parámetros estimados con estadísticos T0 y valores P para cada parámetro
+coeftest(modelo3,df=dfmodelo3)
+```
+
+$$
+\begin{array}{|c|c|c|c|c|}
+\hline
+Parámetro & Estimación & s.e & Valor~T_0 & P(|t_{21}|>|T_0|)\\
+\hline
+\phi_1 & 0.20547223 & 0.00496340 &  41.3975 & < 2.2\times 10^{-16} \\
+\phi_2 & 0.22020789 & 0.00120614 & 182.5718 & < 2.2\times 10^{-16} \\
+\phi_3 & 0.22925007 & NA & NA & NA \\   
+\phi_{11} & 0.21527156 & 0.00077845 & 276.5399 & < 2.2\times 10^{-16} \\
+\phi_{16} & -0.27911984 & 0.00170575 & {-16}3.6348 & < 2.2\times 10^{-16} \\
+\theta_{16} & 0.00663268 & 0.00869881 &  0.7625 & 0.4466941 \\   
+\theta_{17} & -0.04664808 & 0.00638427 &  -7.3067 & 6.849\times 10^{-12} \\
+\beta_0 & 35.75439231 & 1.78481475 &  20.0326 & < 2.2\times 10^{-16} \\
+\beta_1 &   0.13246994 & 0.03326014 &   3.9828 & 9.609\times 10^{-5} \\
+\beta_2 &  0.00070454 & 0.00016598 &  4.2446 &3.384\times 10^{-5} \\
+\delta_1 & -3.20813481 & 0.90705693 &  -3.5369& 0.0005059 \\
+\delta_2 & 5.19447266 & 1.07886175 &   4.8148 &2.950\times 10^{-6} \\
+\delta_3 & 11.89802810 & 1.21480344 &   9.7942 &< 2.2\times 10^{-16} \\
+\delta_4 & 7.34143098 & 1.42609306 &   5.1479 &6.407\times 10^{-7} \\
+\delta_5 & 12.17472114 & 1.49948305 &   8.1193 &5.215\times 10^{-14} \\
+\delta_6 & 9.82591457 & 1.54163580 &   6.3737 &1.303\times 10^{-9} \\
+\delta_7 & 8.53733058 & 1.52915224 &   5.5830 &7.848\times 10^{-8} \\
+\delta_8 & 9.10771206 & 1.45274779 &   6.2693 &2.283\times 10^{-9} \\
+\delta_9 & 12.53592372 & 1.22869317 &  10.2026 &< 2.2\times 10^{-16} \\
+\delta_{10} & 10.67321473 & 1.07422253 &   9.9358 &< 2.2\times 10^{-16} \\
+\delta_{11} & 9.06327526 & 0.90126601 &  10.0562 &< 2.2\times 10^{-16} \\
+\hline
+\end{array}
+$$
+
+
+* Paso 4) 
+
+Obtenga gráfica del ajuste de la serie en escala original y de los residuales de ajuste $\hat{a}_t$
+
+
+
+Para el modelo 3
+
+```{r, fig.height=5, fig.width=6}
+#Gráfico de la serie y su ajuste
+ythat3=modelo3$fitted #Este objeto ya tiene fechas
+plot(datos, lwd=2, col = "#717D7E")
+lines(ythat3,col="#3498DB", lwd=2)
+grid()
+legend("topleft",legend=c("Original","Ajuste modelo 4"),lty=1,col=c("#717D7E", "#3498DB"))
+
+#Gráficos de residuales
+plot(residuals(modelo3), xlab = "Tiempo", ylab = "Residuales", col = "#01588A")
+abline(h=0)
+abline(h=c(-2*sqrt(modelo3$sigma2),2*sqrt(modelo3$sigma2)),lty=1, col=2)
+grid()
+legend("bottomright", legend = "Modelo 4", col = "#01588A", lty = 1)
+plot(as.numeric(modelo3$fitted),residuals(modelo3),xlab = "Valores Ajustados", ylab = "Residuales", col = "#01588A")
+abline(h=0)
+abline(h=c(-2*sqrt(modelo3$sigma2),2*sqrt(modelo3$sigma2)),lty=1, col=2)
+grid()
+legend("bottomright", legend = "Modelo 4", col = "#01588A", lty = 1)
+```
+
+
+* Paso 5)
+
+Calculo del AIC y BIC 
+
+
+```{r}
+AICmodelo3=exp(crit.inf.resid(residuales=residuals(modelo3),n.par=k3))
+BICmodelo3=exp(crit.inf.resid(residuales=residuals(modelo3),n.par=k3,AIC="FALSE"))
+
+AICmodelo3
+BICmodelo3
+```
+
+
+* Paso 6) 
+
+Valide supuestos sobre el error de ajuste $𝑎_t$
+
+
+```{r, fig.height=5, fig.width=6}
+#ACF sobre residuales de ajuste en el modelo. Use valor para m el que se indica en la guía del trabajo
+acf(as.numeric(residuals(modelo3)),ci.type="ma",lag.max=36,main="ACF modelo3",ci.col=2, lwd=2, col="cyan4")
+
+#PACF sobre residuales de ajuste en el modelo. Use valor para m el que se indica en la guía del trabajo
+pacf(as.numeric(residuals(modelo3)),lag.max=36,main="PACF modelo3",ci.col=2, lwd=2, col="cyan4")
+
+BP.LB.test(residuals(modelo3),maxlag=36,type="Ljung") #test Ljung-Box use máximo m igual al de ACF y PACF
+
+#Normalidad sobre residuales de ajuste en el modelo. Sólo si no se rechaza supuesto de ruido blanco
+shapiro.test(residuals(modelo3))
+qqnorm(residuals(modelo3),main="Gráfico de normalidad residuos de ajuste modelo 4", col = "#01588A")
+qqline(residuals(modelo3),col=2)
+grid()
+```
+
+
+
+* Paso 7) 
+
+Pronósticos para la validación cruzada (en este ejemplo se asume 12 pronósticos ex – post)
+
+
+Para el modelo 3 
+
+```{r}
+predmodelo3=ts(as.data.frame(forecast(modelo3,xreg=Xnuevo,level=95)),freq=12, start=c(2019,1))
+predmodelo3
+ytpronmodelo3=predmodelo3[,1] #Tomando el pronóstico puntual. Este objeto tiene fechas
+
+#Medidas precisión pronósticos
+accuracy(ytpronmodelo3,ytf)
+amplitud(LIP=predmodelo3[,2],LSP=predmodelo3[,3])
+cobertura(real=ytf,LIP=predmodelo3[,2],LSP=predmodelo3[,3])
+```
+
+
+
+# Modelos lineales en los parámetros de tendencia y estacionalidad, y errores ARMA(p,q)(P,Q)[s]
+
+## Modelo 4 
+
+
+$$ Y_t=\beta_0+\beta_1t+\beta_2t^2+\sum_{i=1}^{11}\delta_iI_{i,t}+E_t, ~~ donde ~ E_t ~ es~ un~ ARMA(3,6)(1,1)[12], ~es ~decir~ \phi_3(B) \Phi_1 (B^{12}) E_t = \theta_6(B) \Theta_1 (B^{12}) a_t, ~~con~  \{a_t\}_{t\in Z^+} \text{un RB} \sim N(0, \sigma_a^2)$$
+
+$$ Y_t=\beta_0+\beta_1t+\beta_2t^2+\sum_{i=1}^{11}\delta_iI_{i,t}+E_t, ~~ donde ~~ E_t = \phi_1 E_{t-1} + \phi_2 E_{t-2} + \phi_3 E_{t-3} + \Phi_1 E_{t-12} - \phi_1 \Phi_1 E_{t-13}  - \phi_2 \Phi_1 E_{t-14}   - \phi_3 \Phi_1 E_{t-15} + a_t \theta_1 a_{t-1} +  \theta_2 a_{t-2} + \theta_3 a_{t-3} + \theta_4 a_{t-4} + \theta_5 a_{t-5} + \theta_6 a_{t-6} +\Theta_1 a_{t-12}  + \theta_1 \Theta_1 a_{t-13}  + \theta_2 \Theta_1 a_{t-14} +  \theta_3 \Theta_1 a_{t-15} +  \theta_4 \Theta_1 a_{t-16} +  \theta_5 \Theta_1 a_{t-17} +  \theta_6 \Theta_1 a_{t-18} , ~~con~  \{a_t\}_{t\in Z^+} \text{un RB} \sim N(0, \sigma_a^2) $$
+
+
+* Paso 1) 
+
+
+Ya esta listo!!!
+
+
+* Paso 2) ajuste con validación cruzada
+
+
+```{r}
+#indique valor correspondiente a p, q, P y Q en la función Arima, así como la matriz de predictores X en xreg=X
+modelo4=Arima(yt,order=c(3,0,6),seasonal=list(order=c(1,0,1)),xreg=X,method="ML")
+```
+
+
+
+* Paso 3)
+
+```{r}
+#Calcule grados de libertad del MSE del modelo,
+k4=length(coef(modelo4)[coef(modelo4)!=0])
+k4 #número de parámetros del modelo
+dfmodelo4=n-k4
+#Construya tabla de parámetros estimados con estadísticos T0 y valores P para cada parámetro
+coeftest(modelo4,df=dfmodelo4)
+```
+
+
+$$
+\begin{array}{| c | c | c | c| c |}
+\hline
+
+Parámetros&Estimación&s.e&Valor~T_0&P(|t_{25}|>|T_0|)\\
+\hline
+\phi_1&-0.28401500&0.08496311&-3.3428&0.0009979\\
+\phi_2&0.00447891&0.09782205&0.0458&0.9635284\\
+\phi_3&0.86887138&0.08435945&10.2996&<2.2\times 10^{-16}\\
+\theta_1&0.55441161&0.11650718&4.7586&3.838\times 10^{-6}\\
+\theta_2&0.55017658&0.15470262&3.5563&0.0004742\\
+\theta_3&-0.43159832&0.16978497&-2.5420&0.0118149\\
+\theta_4&0.01861694&0.13574113&0.1372&0.8910564\\
+\theta_5&-0.20033008&0.11276308&-1.7766&0.0772329\\
+\theta_6&-0.09196436&0.07539504&-1.2198&0.2240573\\
+\Phi_1&-0.66329751&0.25239158&-2.6280&0.0092858\\
+\Theta_1&0.71887097&0.23377399&3.0751&0.0024130\\
+\beta_0&35.69703746&2.05258297&17.3913&<2.2\times 10^{-16}\\
+\beta_1&0.13836682&0.04147569&3.3361&0.0010209\\
+\beta_2&0.00067166&0.00019156&3.5063&0.0005663\\
+\delta_{1}&-3.25663747&0.91595361&-3.5555&0.0004757\\
+\delta_{2}&5.04334714&0.87227321&5.7818&2.970\times 10^{-8}\\
+\delta_{3}&11.93369297&1.00384232&11.8880&<2.2\times 10^{-16}\\
+\delta_{4}&7.20003327&1.05750794&6.8085&1.244\times 10^{-10}\\
+\delta_{5}&11.95898258&1.06660554&11.2122&<2.2\times 10^{-16}\\
+\delta_{6}&9.80840972&1.08475645&9.0420&<2.2\times 10^{-16}\\
+\delta_{7}&8.33018717&1.06367127&7.8315&3.246\times 10^{-13}\\
+\delta_{8}&8.96135492&1.05673368&8.4802&6.067\times 10^{-15}\\
+\delta_{9}&12.52441180&0.99642708&12.5693&<2.2\times 10^{-16}\\
+\delta_{10}&10.46943116&0.85849313&12.1951&<2.2\times 10^{-16}\\
+\delta_{11}&8.85265562&0.90852259&9.7440&<2.2\times 10^{-16}\\
+
+
+\hline
+\end{array}
+$$
+
+
+## Ecuación de ajuste
+
+$$\hat{Y}_t = 35.697+0.138t+0.00067t^2-3.2566I_{1,t}+5.0433I_{2,t}+11.9337I_{3,t}+7.2003I_{4,t}+11.959I_{5,t}+9.8084I_{6,t}+8.3302I_{7,t}+8.9614I_{8,t}+12.5244I_{9,t}+10.4694I_{10,t}+8.8527I_{11,t} + \widehat{\widehat{E}}_t$$
+
+$$\widehat{\widehat{E}}_t = -0.284 \widehat{E}_{t-1} + 0.0045 \widehat{E}_{t-2} + 0.8689 \widehat{E}_{t-3}-0.6633\widehat{E}_{t-12}-(-0.2840 \times -0.6633) \widehat{E}_{t-13}-(0.0045 \times -0.6633) \widehat{E}_{t-14} - (0.8689 \times -0.6633)\widehat{E}_{t-15}+0.5544\widehat{a}_{t-1}+0.5502\widehat{a}_{t-2}-0.4316\widehat{a}_{t-3}+0.0186\widehat{a}_{t-4}-0.2003\widehat{a}_{t-5}-0.092\widehat{a}_{t-6}+0.7189\widehat{a}_{t-12}+(0.5544 \times 0.7189) \widehat{a}_{t-13} +(0.5502 \times 0.7189) \widehat{a}_{t-14}+(-0.4316 \times 0.7189) \widehat{a}_{t-15} +(0.0186 \times 0.7189) \widehat{a}_{t-16} +(-0.2003 \times 0.7189) \widehat{a}_{t-17}+(-0.092 \times 0.7189) \widehat{a}_{t-18}$$
+
+
+## Ecuación de pronóstico
+
+
+$$\hat{Y}_{216}(L) = 35.697+0.138(216+L)+0.00067(216+L)^2-3.2566I_{1,216+L}+5.0433I_{2,216+L}+11.9337I_{3,216+L}+7.2003I_{4,216+L}+11.959I_{5,216+L}+9.8084I_{6,216+L}+8.3302I_{7,216+L}+8.9614I_{8,216+L}+12.5244I_{9,216+L}+10.4694I_{10,216+L}+8.8527I_{11,216+L} + \wideha(216+L){\wideha(216+L){E}}_(216+L)$$
+
+$$\widehat{E}_{216}(L) = -0.284 \widehat{E}_{216}(L-1) + 0.0045 \widehat{E}_{216}(L-2) + 0.8689 \widehat{E}_{216}(L-3) - 0.6633\widehat{E}_{216}(L-12)-(-0.2840 \times -0.6633) \widehat{E}_{216}(L-13) - (0.0045 \times -0.6633) \widehat{E}_{216}(L-14) - (0.8689 \times -0.6633) \widehat{E}_{216}(L-15)+0.5544\widehat{a}_{216}(L-1)+0.5502\widehat{a}_{216}(L-2)-0.4316\widehat{a}_{216}(L-3)+0.0186\widehat{a}_{216}(L-4)-0.2003\widehat{a}_{216}(L-5)-0.092\widehat{a}_{216}(L-6)+0.7189\widehat{a}_{216}(L-12)+(0.5544 \times 0.7189) \widehat{a}_{216}(L-13)+(0.5502 \times 0.7189) \widehat{a}_{216}(L-14)+(-0.4316 \times 0.7189) \widehat{a}_{216}(L-15) +(0.0186 \times 0.7189) \widehat{a}_{216}(L-16) +(-0.2003 \times 0.7189) \widehat{a}_{216}(L-17)+(-0.092 \times 0.7189) \widehat{a}_{216}(L-18)$$
+
+$$\widehat{E}_{216}(L-j)= \left\{ \begin{array}{lcc}
+             Residuo~estructural~\widehat{E}_{216+L-j} &   si  & L-j \leq 0 \\
+             Pronóstico~de~los~ciclos~L-j~periodos~después~de~t=216 &  si & L-j>0 
+             \end{array}
+   \right.$$
+   
+   
+$$\widehat{a}_{216}(L-i)= \left\{ \begin{array}{lcc}
+             Residuo~de~ajuste~\widehat{a}_{216+L-i} &   si  & L-i \leq 0 \\
+             0, ~~ El~pronóstico~del~R.B.~L-i~~periodos~después~de~t=216 &  si & L-i>0 
+             \end{array}
+   \right.$$
+
+
+* Paso 4)
+
+
+```{r, fig.height=5, fig.width=6}
+ythat4=modelo4$fitted #este objeto ya queda con las fechas de la serie
+
+#Gráfico de la serie y su ajuste
+plot(datos, col = "#717D7E", lwd=2)
+lines(ythat4,col="#3498DB", lwd=2)
+grid()
+legend("topleft",legend=c("Original","Ajuste modelo 3"),lty=1,col=c("#717D7E", "#3498DB"))
+
+#Gráficos de residuales
+plot(residuals(modelo4), xlab = "Tiempo", ylab = "Residuales", col = "#01588A")
+abline(h=0)
+abline(h=c(-2*sqrt(modelo4$sigma2),2*sqrt(modelo4$sigma2)),lty=1, col=2)
+grid()
+legend("bottomright", legend = "Modelo 3", col = "#01588A", lty = 1)
+
+plot(as.numeric(modelo4$fitted),residuals(modelo4), xlab = "Tiempo", ylab = "Residuales" ,col = "#01588A")
+abline(h=0)
+abline(h=c(-2*sqrt(modelo4$sigma2),2*sqrt(modelo4$sigma2)),lty=1, col=2)
+grid()
+legend("bottomright", legend = "Modelo 3", col = "#01588A", lty = 1)
+
+
+```
+
+
+* Paso 5) 
+
+```{r}
+AICmodelo4=exp(crit.inf.resid(residuales=residuals(modelo4),n.par=k4))
+BICmodelo4=exp(crit.inf.resid(residuales= residuals(modelo4),n.par=k4,AIC="FALSE"))
+
+AICmodelo4
+BICmodelo4
+```
+
+* Paso 6)
+
+
+```{r, fig.height=5, fig.width=6}
+#ACF sobre residuales de ajuste en el modelo. Use valor para m el que se indica en la guía del trabajo
+acf(as.numeric(residuals(modelo4)),ci.type="ma",lag.max=36,main="ACF modelo4",ci.col=2, lwd=2, col="cyan4")
+
+#PACF sobre residuales de ajuste en el modelo. Use valor para m el que se indica en la guía del trabajo
+pacf(as.numeric(residuals(modelo4)),lag.max=36,main="PACF modelo4",ci.col=2, lwd=2, col="cyan4")
+
+
+BP.LB.test(residuals(modelo4),maxlag=36,type="Ljung") #test Ljung-Box use máximo m igual al de ACF y PACF
+
+#Normalidad sobre residuales de ajuste en el modelo. Sólo si no se rechaza supuesto de ruido blanco
+shapiro.test(residuals(modelo4))
+qqnorm(residuals(modelo4),main="Gráfico de normalidad residuos de ajuste modelo 3", col= "#01588A")
+qqline(residuals(modelo4),col=2)
+```
+
+
+* Paso 7)
+
+
+```{r}
+#Cálculo del pronóstico con I.P del 95%, en escala original
+predmodelo4=ts(as.data.frame(forecast(modelo4,xreg=Xnuevo,level=95)),freq=12, start=c(2019,1))
+predmodelo4
+ytpronmodelo4=predmodelo4[,1] #Tomando el pronóstico puntual. Este objeto tiene fechas
+#Medidas precisión pronósticos
+accuracy(ytpronmodelo4,ytf)
+amplitud(LIP=predmodelo4[,2],LSP=predmodelo4[,3])
+cobertura(real=ytf,LIP=predmodelo4[,2],LSP=predmodelo4[,3])
+
+```
+
+
+
+
+grafica comparativa de los valores reales y pronosticos puntuales
+
+```{r}
+ytpronmodelo1
+ytpronmodelo2
+ytpronmodelo3
+ytpronmodelo4
+```
+
+
+
+
+```{r, fig.height=5, fig.width=6}
+plot(ytf,lwd=2, col=1, type="b", pch=1, xlab="Periodo del año", ylim = c(85, 120), ylab = "Producción nominal")
+lines(ytpron1[,1], lwd = 2, col=2, type = "b", pch = 2)
+lines(ytpronmodelo1,lwd=2, col=3, type="b", pch=3)
+lines(ytpronmodelo2,lwd=2, col=4, type="b", pch=4)
+lines(ytpronmodelo4,lwd=2,col=5, type="b", pch=5)
+lines(ytpronmodelo3,lwd=2,col=6, type="b", pch=6)
+grid()
+legend("bottomright",legend=c("Serie original","Pronósticos Modelo global", "Pronósticos Modelo 1", "Pronósticos Modelo 2", "Pronósticos Modelo 3", "Pronósticos Modelo 4"),col=1:6,lwd=2, pch=1:6, cex=0.8)
+```
+
+
+
+# Todo sobre el modelo local 
+
+## Funciones a utilizar:
+
+```{r}
+#Creando función para extraer correctamente estimaciones de los efectos estacionales 𝜹𝒊 por filtro de descomposición
+factoresdeltai=function(descom,s,estacionini){
+if(estacionini==1){
+deltasi=descom$figure
+}
+if(estacionini!=1){
+j=estacionini;deltasi=c(descom$figure[(s-j+2):s],descom$figure[1:(s-j+1)])
+}
+deltasi
+}
+```
+
+
+## Ajuste modelo 3 Descomposición aditiva & Loess cuadrático
+
+
+```{r}
+#Descomposición aditiva de la serie recortada
+descom=decompose(yt,type="additive")
+
+s=12 #Longitud del periodo estacional
+
+#Componente estacional estimada de la descomposición de la serie recortada
+St=descom$seasonal
+
+
+deltas_i=factoresdeltai(descom=descom,s=12,estacionini=1) #Obteniendo los s factores estacionales estimados
+
+
+#el período es s=12 y la serie arranca en estación 1
+deltas <- data.frame(deltas_i)
+
+```
+
+En la Tabla se muestra la estimación de los efectos estacionales de acuerdo al filtro de la descomposición aditiva sobre los primeros 216 datos
+
+$$\begin{array}{| c | c | c | c| c |}
+\hline
+i& \hat{\delta}_i\\
+\hline
+1&-10.8780433\\
+2&-2.3143178\\
+3&4.3650940\\
+4&-0.5319649\\
+5&4.3979371\\
+6&2.0783292\\
+7&0.7969567\\
+8&1.2373979\\
+9&4.6148489\\
+10&2.5229371\\
+11&1.0633783\\
+12&-7.3525531\\
+\hline
+suma & 0\\
+\hline
+\end{array}$$
+
+
+
+```{r}
+#Pronósticos para la componente estacional usando estimaciones del filtro de descomposición clásica
+
+#los pronósticos inician en enero 2019 y terminan en diciembre 2019
+
+i=c(1,2,3,4,5,6,7,8,9,10,11,12) #identificando la estación correspondiente a los m=12 períodos de pronósticos
+```
+
+
+
+
+```{r}
+Stnuevo=deltas_i[i] #Asignando el valor de St a los periodos a pronosticar
+Stnuevo=ts(Stnuevo,frequency=12,start=c(2019,1)) #convirtiendo en serie de tiempo al pronóstico de St
+Stnuevo
+```
+
+```{r}
+#Desestacionalizando o ajustando estacionalmente a la serie recortada, según modelo aditivo
+ytd=yt-St
+```
+
+
+
+```{r}
+#LOESS cuadrático (AICC) sobre serie desestacionalizada
+mod_local=loess.as(t,ytd,degree=2,criterion="aicc",family="gaussian",plot=F)
+summary(mod_local)
+alfa.optim=mod_local$pars$span #guardando el valor óptimo del parámetro alfa
+```
+
+
+
+Gráfica de ajuste 
+
+```{r}
+mod_local_Tt <- ts(fitted(mod_local), start  = c(2001,1), frequency = 12)
+mod_local_ajust <- mod_local_Tt + St # Ajuste D&LC(AICC)
+```
+
+
+```{r, fig.height=5, fig.width=6}
+plot(Datos20, col = "#717D7E", lwd=2)
+lines(mod_local_ajust, col="#3498DB", lwd=2)
+legend("topleft", legend = c("Original", "Ajuste D&LC(AICC)"), lty=1, col=c("#717D7E", "#3498DB"))
+
+```
+
+
+
+AIC y BIC modelo local 
+
+```{r}
+et_local <- yt - mod_local_ajust
+
+p_local <- round(mod_local$enp)+s-1
+AIC_local <- exp(crit.inf.resid(residuales=et_local,n.par=p_local))
+BIC_local <- exp(crit.inf.resid(residuales=et_local,n.par=p_local,AIC="FALSE"))
+
+AIC_local
+BIC_local
+```
+
+
+Gráficos de residuales 
+
+```{r, fig.height=5, fig.width=6}
+# Residuales vs tiempo mod3
+df=n-(round(mod_local$enp)+s-1) #Grados de libertad aproximados del ajuste total
+MSE_local=sum(et_local^2)/df #MSE aproximado del ajuste total del modelo 3
+plot(et_local,ylim=c(min(-2*sqrt(MSE_local),et_local),max(2*sqrt(MSE_local),et_local)), col = "#01588A")
+abline(h=c(-2*sqrt(MSE_local),0,2*sqrt(MSE_local)),col=2)
+legend("topleft", legend=c("Modelo local"), lty=1, col = "#01588A", lwd=2)
+
+```
+
+
+
+```{r, fig.height=5, fig.width=6}
+plot(as.numeric(mod_local_ajust),et_local,ylim=c(min(-2*sqrt(MSE_local),et_local),max(2*sqrt(MSE_local),et_local)), col= "#01588A")
+abline(h=c(-2*sqrt(MSE_local),0,2*sqrt(MSE_local)),col=2)
+legend("topleft", legend=c("Modelo local"), lty=1, col = "#01588A", lwd=2,cex = 0.8)
+```
+
+
+
+
+Pronosticos y medidas de pronosticos 
+
+
+```{r}
+#Pronósticos de la tendencia por loess cuadrático óptimo (AICC)
+Ttnuevo_local <- predict(loess(ytd~t,span=alfa.optim,degree=2,control=loess.control(surface="direct")),
+data.frame(t=tnuevo),se=FALSE)
+Ttnuevo_local <- ts(Ttnuevo_local,freq=12,start=c(2019,1)) #convirtiendo en serie de tiempo al pronóstico de Tt, modelo 3
+ytpron_local <- Ttnuevo_local + Stnuevo #Pronóstico puntual Modelo 2
+#Tabla con pronósticos de las componentes y de la serie, Modelo 2
+tablapron_local <- cbind(Pron_Tt=Ttnuevo_local, Pron_St=Stnuevo,Pron_serie=ytpron_local)
+tablapron_local
+```
+
+
+
+```{r}
+accuracy(ytpron_local,ytnuevo)
+```
+
+
+ACF y PACF 
+
+
+```{r, fig.height=5, fig.width=6}
+acf(et_local,lag.max=36,ci.type="ma",col="cyan4",ci.col=2, lwd=2, main = 'ACF de los residuales')
+```
+
+
+```{r, fig.height=5, fig.width=6}
+pacf(et_local,lag.max=36,col="cyan4",ci.col=2, lwd=2, main = 'PACF de los residuales')
+```
+
+
+
+```{r, fig.height=5, fig.width=6}
+shapiro.test(et_local)
+qqnorm(et_local,main="Gráfico de normalidad residuos de ajuste modelo1", col = "#01588A")
+qqline(et_local,col=2)
+```
+
+
+
+## Tabla de medidas de ajuste de los 4 modelos
+
+
+```{r}
+AIC <- c(AIC1, AICmodelo1, AICmodelo2, AICmodelo4, AICmodelo3)
+BIC <- c(BIC1, BICmodelo1, BICmodelo2, BICmodelo4, BICmodelo3)
+modelo <- c("Modelo global", "Modelo 1", "Modelo 2", "Modelo 3", "Modelo 4")
+p <- c(14, k1, k2, k4, k3)
+data_ajuste <- cbind(modelo, p = p, AIC = round(AIC,5), BIC = round(BIC,5))
+data_ajuste
+```
+
+
+
+$$
+\begin{array}{|c|c|c|}
+\hline
+modelo&p&AIC&BIC&Validez ~R.B & Validez~Normalidad\\
+\hline
+Modelo~global&14&16.85948&20.98234&  No & NA\\
+Modelo~1&30&11.26579&18.00337 & Si & Si\\
+Modelo~2&25&10.95304&16.18807& Si & Si\\
+Modelo~3&25&11.25246&16.63059& Si & Si\\
+Modelo~4&21&11.24595&15.61388& Si & Si\\
+\hline
+\end{array}
+$$
+
+
+
+
+```{r}
+p <- 2
+efectosestac_modelo_global<- ts(c(coef(mod1)[(p+2):14],0),freq=1,start=1)
+efectosestac_modelo_1 <- ts(c(coef(modelo1)[20:k1],0),freq=1,start=1)
+efectosestac_modelo_2 <- ts(c(coef(modelo2)[15:k2],0),freq=1,start=1)
+efectosestac_modelo_3 <- ts(c(coef(modelo4)[15:k4],0),freq=1,start=1)
+efectosestac_modelo_4 <- ts(c(coef(modelo3)[37:47],0),freq=1,start=1)
+
+par(pty="s")
+plot(efectosestac_modelo_global,lwd=4,ylab="",xlab="Periodo del año", col=1, ylim = c(-5,20))
+lines(efectosestac_modelo_1,lty=2,lwd=4, col = 2)
+lines(efectosestac_modelo_2,lty=2,lwd=4, col = 3)
+lines(efectosestac_modelo_3,lty=2,lwd=4, col = 4)
+lines(efectosestac_modelo_4,lty=2,lwd=4, col = 5)
+grid()
+legend("topleft",legend=c("Modelo global", "Modelo 1","Modelo 2", "Modelo 3", "Modelo 4"),col=c(1:5),lty=1:2,lwd=2, cex = 0.7)
+```
+
+
+# Tabla efectos estacionales
+
+```{r}
+data_estacional <- cbind(modelo_global = efectosestac_modelo_global, modelo_1 = efectosestac_modelo_1, modelo_2 = efectosestac_modelo_2, modelo_3 = efectosestac_modelo_3, modelo_4=efectosestac_modelo_4)
+
+data_estacional
+```
+
+
+$$
+&modelo~global&modelo~1&modelo~2&modelo~3&modelo~4\\
+\delta_1&-3.181782&-3.356426&-3.277982&-3.256637&-3.208135\\
+\delta_2&5.306946&4.924927&5.025501&5.043347&5.194473\\
+\delta_3&12.022042&11.629826&11.889028&11.933693&11.898028\\
+\delta_4&7.269061&7.087539&7.151081&7.200033&7.341431\\
+\delta_5&12.114670&11.901758&11.969520&11.958983&12.174721\\
+\delta_6&9.825535&9.674429&9.778021&9.808410&9.825915\\
+\delta_7&8.429434&8.451158&8.319673&8.330187&8.537331\\
+\delta_8&9.093035&9.085676&8.977563&8.961355&9.107712\\
+\delta_9&12.516336&12.607003&12.527744&12.524412&12.535924\\
+\delta_{10}&10.549338&10.739403&10.495094&10.469431&10.673215\\
+\delta_{11}&8.947596&9.135679&8.879481&8.852656&9.063275\\
+\delta_{12}&0.000000&0.000000&0.000000&0.000000&0.000000\\
+
+$$
+
+
+
+

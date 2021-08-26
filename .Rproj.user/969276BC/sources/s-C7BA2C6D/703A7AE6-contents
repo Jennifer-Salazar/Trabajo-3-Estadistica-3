@@ -1,0 +1,14 @@
+---
+title: 'Trabajo # 3'
+author: "Juan Esteban Sánchez Pulgarín"
+date: "26/8/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+1. Análisis descriptivo y test HEGY de raices unitarias estacionales, usando los primeros n = 216 datos de la serie.
+a) Describa brevemente los patrones de la serie: tendencia, estacionalidad, presencia de ciclos y la varianza; explique
+por qu´e se puede o no considerar la tendencia y la estacionalidad como de tipo global.
