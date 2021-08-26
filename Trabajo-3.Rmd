@@ -1,0 +1,209 @@
+---
+title: "Codigos"
+author: "Jennifer Salazar"
+date: "26/8/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Librerias
+
+```{r}
+library(pdR)
+library(forecast)
+library(lmtest)
+```
+
+
+1. Análisis descriptivo y test HEGY de raıces unitarias estacionales, usando los primeros n = 216 datos de la serie.
+
+Lectura de Datos 
+
+```{r}
+# Lectura de los datos
+datos=read.table("anex-EMMET-dic2019-Fabricacion de otros productos quimicos (1).csv",header=T,sep=";",skip=14,dec=",",colClasses=c(rep("NULL",4),"numeric",rep("NULL",6)))
+datos=ts(datos,freq=12,start=c(2001,1))
+
+
+#Defina longitud serie recortada
+n=length(datos)-12 #En este ejemplo se recortan 12 datos
+t=1:n
+
+#Serie recortada
+yt=ts(datos[t],freq=12,start=c(2001,1))
+```
+
+
+a) Describa brevemente los patrones de la serie: tendencia, estacionalidad, presencia de ciclos y la varianza; explique
+por que se puede o no considerar la tendencia y la estacionalidad como de tipo global.
+
+Gráfica de la serie recortada
+
+```{r}
+plot(yt, lwd=2, xlab="Tiempo", ylab = "Producción nominal", col = '#717D7E')
+grid()
+```
+
+(Decir todo lo que vemos a partir de la serie)
+
+Como aplicar en R diferencias regulares y estacionales a una serie de tiempo
+
+```{r}
+Yt <- yt
+difd1 <- diff(Yt)
+difD12 <- diff(Yt,lag=12)
+difdD12 <- diff(diff(Yt,lag=12))
+```
+
+
+b) Si la serie es de varianza constante, presente y analice las siguientes graficas
+
+* de la serie recortada y su ACF muestral,
+
+```{r}
+par(mfrow=c(1,2))
+plot(Yt, lwd=2, xlab="Tiempo", ylab = "Producción nominal", col = 'cyan4', main = "Serie original", cex.main=0.7)
+grid()
+
+acf(as.numeric(Yt),ci.type="ma",lag.max=36,lwd=2,main="",cex.lab=0.5,cex.axis=0.5)
+title(main="ACF serie original",cex.main=0.5)
+```
+
+
+
+* de su primera diferencia regular ∇Yt y su ACF muestral
+
+```{r}
+par(mfrow=c(1,2))
+plot(difd1, lwd=2, xlab="Tiempo", ylab = "Producción nominal", col = 'cyan4', main="Serie primera diferencia regular", cex.main=0.7)
+grid()
+
+acf(as.numeric(difd1),ci.type="ma",lag.max=36,lwd=2,main="",cex.lab=0.5,cex.axis=0.5)
+title(main="ACF primera diferencia regular",cex.main=0.5)
+abline(v=c(12,24,36),lty=2,col=2)
+```
+
+
+* de su primera diferencia estacional ∇12Yt y su ACF muestral
+
+```{r}
+par(mfrow=c(1,2))
+plot(difD12, lwd=2, xlab="Tiempo", ylab = "Producción nominal", col = 'cyan4', cex.main=0.7, main="Serie primera diferencia estacional")
+grid()
+
+acf(as.numeric(difD12),ci.type="ma",lag.max=36,lwd=2,main="",cex.lab=0.5,cex.axis=0.5)
+title(main="ACF primera diferencia estacional",cex.main=0.5)
+abline(v=c(12,24,36),lty=2,col=2)
+```
+
+
+* de la serie diferenciada por tendencia y estacionalidad (o sea ∇∇12Yt) y su ACF muestral
+
+```{r}
+par(mfrow=c(1,2))
+plot(difdD12, lwd=2, xlab="Tiempo", ylab = "Producción nominal", col = 'cyan4', cex.main=0.7, main="Serie diferencia regular y estacional (d=D=1)")
+grid()
+
+acf(as.numeric(difdD12),ci.type="ma",lag.max=36,lwd=2,main="",cex.lab=0.5,cex.axis=0.5)
+title(main="ACF diferencia regular y estacional (d=D=1)",cex.main=0.5)
+abline(v=c(12,24,36),lty=2,col=2)
+```
+
+
+
+Ejecución del test HEGY
+
+```{r}
+#Test Hegy sobre serie recortada
+library(pdR)
+HEGY.test(wts=yt,itsd=c(0,0,c(0)),selectlags=list(mode="aic", Pmax=12))$stats
+```
+
+
+**ACF de la serie y de las diferencias regular y estacionales:**
+
+Lo siguiente no se utiliza solo es una ejemplificación de la profesora
+
+
+```{r}
+acf(as.numeric(Yt),ci.type="ma",lag.max=36,lwd=2,main="",cex.lab=0.5,cex.axis=0.5)
+title(main="ACF Yt",cex.main=0.5)
+
+acf(as.numeric(difd1),ci.type="ma",lag.max=36,lwd=2,main="",cex.lab=0.5,cex.axis=0.5)
+title(main="ACF diferencia regular",cex.main=0.5)
+abline(v=c(12,24,36),lty=2,col=2)
+
+pacf(as.numeric(difd1),lag.max=36,lwd=2,main="",cex.lab=0.5,cex.axis=0.5)
+title(main="PACF diferencia regular",cex.main=0.5)
+abline(v=c(12,24,36),lty=2,col=2)
+
+acf(as.numeric(difdD12),ci.type="ma",lag.max=36,lwd=2,main="",cex.lab=0.5,cex.axis=0.5)
+title(main="ACF diferencia regular y estacional (d=D=1)",cex.main=0.5)
+abline(v=c(12,24,36),lty=2,col=2)
+
+
+pacf(as.numeric(difdD12),lag.max=36,lwd=2,main="",cex.lab=0.5,cex.axis=0.5)
+title(main="ACF diferencia regular y estacional (d=D=1)",cex.main=0.5)
+abline(v=c(12,24,36),lty=2,col=2)
+```
+
+
+
+
+**Como ajustar y pronosticar un SARIMA(p,d,q) × (P,D,Q)[s] sin deriva y con todos los coeficientes**
+
+Ajuste modelo 1 ARIMA(8,1,2)(0,1,1)[12]
+
+```{r}
+modelo1=Arima(yt,order=c(8,1,2),seasonal=list(order=c(0,1,1)),method="ML")
+coeftest(modelo1) 
+
+pronostico1=ts(as.data.frame(forecast(modelo1,h=12,level=95)),freq=12,start=c(2019,1))
+pronostico1
+```
+
+
+
+**Como ajustar y pronosticar un SARIMA(p,d,q)×(P,D,Q)[s] sin deriva y con algunos de los coeficientes fijos en cero**
+
+El siguiente codigo sale de los modelos de armasubsets (modelo 3 y modelo 4) por lo tanto se debe corregir el siguiente codigo.
+
+```{r}
+modelo=Arima(yt,order=c(9,1,3),seasonal=list(order=c(1,1,2)),
+fixed=c(0,NA,NA,rep(0,5),NA,NA,0,NA,NA,0,NA),method="ML")
+coeftest(modelo) #Tabla de par´ametros estimados; valores P bajo N(0,1)
+#Fecha de inicio de los pron´osticos es enero de 2019 y horizonte de 12 periodos
+pronostico=ts(as.data.frame(forecast(modelo,h=12,level=95)),freq=12,start=c(2019,1))
+pronostico
+```
+
+
+**Calculo de exp(C∗n(p)) en modelos ARIMA(p,d,q)(P,D,Q)[s]:**
+
+
+```{r}
+#Creando funci´on usuario crit.inf.resid() para calcular C*n(p)
+crit.inf.resid=function(residuales,n.par,AIC="TRUE"){
+  if(AIC=="TRUE"){
+    #Calcula AIC
+    CI=log(mean(residuales^2))+2*n.par/length(residuales)
+  }
+  if(AIC=="FALSE"){
+    #Calcula BIC
+    CI=log(mean(residuales^2))+n.par*log(length(residuales))/length(residuales)
+  }
+  CI
+}
+
+
+#Tome k igual al total de parametros del modelo, contando incluso la deriva cuando el modelo tenga este parametro
+#Si no transformo a Yt:
+
+# AICmodelo=exp(crit.inf.resid(residuales=residuals(modelo),n.par=k))
+# BICmodelo=exp(crit.inf.resid(residuales=residuals(modelo),n.par=k,AIC="FALSE"))
+
+```
+
