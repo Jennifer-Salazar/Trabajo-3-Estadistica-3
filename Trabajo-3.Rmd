@@ -166,6 +166,8 @@ Ajuste y pronostico del modelo 1 ARIMA(8,1,2)(0,1,1)[12]
 
 Ecuación:
 
+modelo 1 ARIMA(8,1,2)(0,1,1)[12]
+
 $$\phi_8(B)  ∇^1_{12}
 ∇^dYt = \theta_2(B) \Theta_1(B^{12})Et$$
 
@@ -187,6 +189,8 @@ accuracy(pronostico1[,1],ytf)
 Ajuste y pronostico del modelo 2 ARIMA(1,0,2)(0,1,1)[12] con deriva:
 
 Ecuación:
+
+modelo 2 ARIMA(1,0,2)(0,1,1)[12] con deriva:
 
 $$\phi_1(B)  ∇^1_{12}Yt = \delta + \theta_2(B) \Theta_1(B^{12})Et$$
 
