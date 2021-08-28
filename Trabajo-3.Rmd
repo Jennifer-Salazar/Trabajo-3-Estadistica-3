@@ -50,7 +50,8 @@ por que se puede o no considerar la tendencia y la estacionalidad como de tipo g
 Gráfica de la serie recortada
 
 ```{r}
-plot(yt, lwd=2, xlab="Tiempo", ylab = "Producción nominal", col = '#717D7E')
+par(pty="s")
+plot(yt, lwd=2, xlab="Tiempo", ylab = "Producción nominal", col = '#717D7E', main="Serie original")
 grid()
 ```
 
@@ -71,9 +72,10 @@ b) Si la serie es de varianza constante, presente y analice las siguientes grafi
 * de la serie recortada y su ACF muestral,
 
 ```{r}
-par(mfrow=c(1,2))
+
 plot(Yt, lwd=2, xlab="Tiempo", ylab = "Producción nominal", col = 'cyan4', main = "Serie original", cex.main=0.7)
 grid()
+
 
 acf(as.numeric(Yt),ci.type="ma",lag.max=36,lwd=2,main="",cex.lab=0.5,cex.axis=0.5)
 title(main="ACF serie original",cex.main=0.5)
@@ -84,7 +86,7 @@ title(main="ACF serie original",cex.main=0.5)
 * de su primera diferencia regular ∇Yt y su ACF muestral
 
 ```{r}
-par(mfrow=c(1,2))
+
 plot(difd1, lwd=2, xlab="Tiempo", ylab = "Producción nominal", col = 'cyan4', main="Serie primera diferencia regular", cex.main=0.7)
 grid()
 
@@ -97,7 +99,6 @@ abline(v=c(12,24,36),lty=2,col=2)
 * de su primera diferencia estacional ∇12Yt y su ACF muestral
 
 ```{r}
-par(mfrow=c(1,2))
 plot(difD12, lwd=2, xlab="Tiempo", ylab = "Producción nominal", col = 'cyan4', cex.main=0.7, main="Serie primera diferencia estacional")
 grid()
 
@@ -110,7 +111,6 @@ abline(v=c(12,24,36),lty=2,col=2)
 * de la serie diferenciada por tendencia y estacionalidad (o sea ∇∇12Yt) y su ACF muestral
 
 ```{r}
-par(mfrow=c(1,2))
 plot(difdD12, lwd=2, xlab="Tiempo", ylab = "Producción nominal", col = 'cyan4', cex.main=0.7, main="Serie diferencia regular y estacional (d=D=1)")
 grid()
 
@@ -217,12 +217,14 @@ plot(armasubsets(difdD12,nar=12,nma=12,y.name='AR',ar.method='ols'))
 
 Parametros sombreados:
 
+(Hacer la tabla)
+
 $$\phi_1, \phi_2, \phi_6, \phi_7, \theta_4, \Theta_1$$
 
-* Polinomio AR regular: $\phi_7(B)=1-\phi_1B-\phi_2B^2-\phi_6B^6-\phi_7B^7$
-* Polinomio MA regular: $\theta_4(B)=1+\theta_4B^4$
-* Polinomio AR estacional: No hay
-* Polinomio MA estacional: $\Theta_1(B^{12})=1+\Theta_1B^{12}$
+* Parte AR regular:$\phi_1, \phi_2, \phi_6, \phi_7$, entonces p=7 y $\phi_7(B)=1-\phi_1B-\phi_2B^2-\phi_6B^6-\phi_7B^7$
+* Parte MA regular:$\theta_4$, entonces q=4 y $\theta_4(B)=1+\theta_4B^4$
+* Parte AR estacional: No hay
+* Parte MA estacional: $\Theta_1$, entonces Q=1 y $\Theta_1(B^{12})=1+\Theta_1B^{12}$
 
 Por lo tanto el modelo es un: $SARIMA(7,1,4)(0,1,1)[12]$
 
@@ -257,14 +259,16 @@ plot(armasubsets(difdD12,nar=18,nma=18,y.name='AR',ar.method="ols"))
 
 Parametros sombreados
 
+(Hacer tabla)
+
 $$\phi_1, \phi_2, \phi_8, \theta_4, \Theta_1, \theta_6 \Theta_1$$
 
 Ademas se incluye el $\theta_6$
 
-* Polinomio AR regular: $\phi_8(B)=1-\phi_1B-\phi_2B^2-\phi_8B^8$
-* Polinomio MA regular: $\theta_6(B)=1+\theta_4B^4+\theta_6B^6$
-* Polinomio AR estacional: No hay
-* Polinomio MA estacional: $\Theta_1(B^{12})=1+\Theta_1B^{12}$
+* Parte AR regular:$\phi_1, \phi_2, \phi_8$, entonces p=8 y $\phi_8(B)=1-\phi_1B-\phi_2B^2-\phi_8B^8$
+* Parte MA regular:$\theta_4, \theta_6$, entonces q=6 y $\theta_6(B)=1+\theta_4B^4+\theta_6B^6$
+* Parte AR estacional: No hay
+* Parte MA estacional:$\Theta_1$, entonces Q=1 y $\Theta_1(B^{12})=1+\Theta_1B^{12}$
 
 Por lo tanto el modelo es un: $SARIMA(8,1,6)(0,1,1)[12]$
 
@@ -359,6 +363,24 @@ auto.arima(yt,ic="bic",seasonal.test="ch")
 auto.arima(yt,ic="bic",seasonal.test="seas")
 ```
 
+
+
+$$Y_t~un~ARIMA(1,1,1)(1,0,0)[12]~sin~deriva:\\
+(1-\phi_1B)(1-\Phi_1B^{12})(1-B)Y_t = (1+\theta_1B)E_t, \\
+con~ \{E_t\}_t~un~R.B \sim N(0, \sigma^2)$$
+
+
+
+
+$$Y_t~un~ARIMA(1,0,2)(0,1,1)[12]~con~deriva:\\
+(1-\phi_1B)(1-B^{12})Y_t = \delta + (1+\theta_1B+\theta_2 B^2)(1-\Theta_1B^{12})E_t, \\
+con~ \{E_t\}_t~un~R.B \sim N(0, \sigma^2)$$
+
+
+
+$$Y_t~un~ARIMA(0,1,1)(1,0,0)[12]~sin~deriva:\\
+(1-\Phi_1B^{12})(1-B)Y_t = (1+\theta_1B)E_t, \\
+con~ \{E_t\}_t~un~R.B \sim N(0, \sigma^2)$$
 
 
 **Calculo de exp(C∗n(p)) en modelos ARIMA(p,d,q)(P,D,Q)[s]:**
