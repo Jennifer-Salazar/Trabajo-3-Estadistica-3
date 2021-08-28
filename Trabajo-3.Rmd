@@ -212,6 +212,7 @@ accuracy(pronostico2[,1],ytf)
 Modelo 3
 
 ```{r}
+win.graph(heigh=5,width=9) 
 plot(armasubsets(difdD12,nar=12,nma=12,y.name='AR',ar.method='ols'))
 ```
 
@@ -254,6 +255,7 @@ Modelo 4
 
 
 ```{r}
+win.graph(heigh=5,width=9)
 plot(armasubsets(difdD12,nar=18,nma=18,y.name='AR',ar.method="ols"))
 ```
 
