@@ -316,27 +316,28 @@ yhatmodelo4 <- modelo4$fitted
 
 ```{r}
 # Modelo 1 
-plot(yt,main="Ajuste con modelo 1")
-lines(yhatmodelo1,col=4)
-legend("topleft",legend=c("Real","ajustada"),col=c(1,4),lwd=2)
+par(pty="s")
+plot(yt,main="Ajuste Modelo 1", cex.main=1)
+lines(yhatmodelo1,col="salmon", lwd=2)
+legend("topleft",legend=c("Real","ajustada"),col=c("black", "salmon"),lwd=2)
 grid()
 
 # Modelo 2
-plot(yt,main="Ajuste con modelo 2")
-lines(yhatmodelo2,col=2)
-legend("topleft",legend=c("Real","ajustada"),col=c(1,2),lwd=2)
+plot(yt,main="Ajuste Modelo 2", cex.main=1)
+lines(yhatmodelo2,col=3, lwd=2)
+legend("topleft",legend=c("Real","ajustada"),col=c(1,3),lwd=2)
 grid()
 
 # Modelo 3
-plot(yt,main="Ajuste con modelo 3")
-lines(yhatmodelo3,col=3)
-legend("topleft",legend=c("Real","ajustada"),col=c(1,3),lwd=2)
+plot(yt,main="Ajuste Modelo 3", cex.main=1)
+lines(yhatmodelo3,col=4, lwd=2)
+legend("topleft",legend=c("Real","ajustada"),col=c(1,4),lwd=2)
 grid()
 
 # Modelo 4
-plot(yt,main="Ajuste con modelo 4")
-lines(yhatmodelo4,col=3)
-legend("topleft",legend=c("Real","ajustada"),col=c(1,3),lwd=2)
+plot(yt,main="Ajuste Modelo 4", cex.main=1)
+lines(yhatmodelo4,col="purple", lwd=2)
+legend("topleft",legend=c("Real","ajustada"),col=c("black","purple"),lwd=2)
 grid()
 ```
 
@@ -429,9 +430,143 @@ k4 <- length(coef(modelo4)[coef(modelo4)!=0])
 AICmodelo4=exp(crit.inf.resid(residuales=residuals(modelo4),n.par=k4))
 BICmodelo4=exp(crit.inf.resid(residuales=residuals(modelo4),n.par=k4,AIC="FALSE"))
 
+
+Modelo <- c("Modelo 1", "Modelo 2", "Modelo 3", "Modelo 4")
+p <- c(k1, k2, k3, k4)
+AIC <- c(AICmodelo1, AICmodelo2, AICmodelo3, AICmodelo4)
+BIC <- c(BICmodelo1, BICmodelo2, BICmodelo3, BICmodelo4) 
+
+medidas_ajuste <- data.frame(Modelo, p, AIC, BIC)
+medidas_ajuste
+
 ```
 
 (Poner los AIC y BIC en forma de tabla)
 
 
+$$
+\begin{array}{|c|c|c|}
+\hline
+Modelo & p &AIC &BIC \\
+\hline
+Modelo~1 & 11 &11.67448 &13.86399 \\
+Modelo~2 & 5 &12.43720 &13.44790 \\
+Modelo~3 & 6 &11.94935 &13.12389 \\
+Modelo~4 & 6 &11.73588 &12.88944 \\
+\hline
+\end{array}
+$$
+
+
+
+## Análisis de residuales
+
+
+```{r}
+par(pty="s")
+plot(residuals(modelo1), xlab = "Tiempo", ylab = "Residuales",col = "salmon")
+abline(h=c(-2*sqrt(modelo1$sigma2),0,2*sqrt(modelo1$sigma2)),lty=2,col=2)
+legend("bottomright", legend = "Modelo 1", col = "salmon", lty = 1)
+grid()
+
+plot(residuals(modelo2), xlab = "Tiempo", ylab = "Residuales",col =3)
+abline(h=c(-2*sqrt(modelo2$sigma2),0,2*sqrt(modelo2$sigma2)),lty=2,col=2)
+legend("bottomright", legend = "Modelo 2", col = 3, lty = 1)
+grid()
+
+plot(residuals(modelo3), xlab = "Tiempo", ylab = "Residuales",col = 4)
+abline(h=c(-2*sqrt(modelo3$sigma2),0,2*sqrt(modelo3$sigma2)),lty=2,col=2)
+legend("bottomright", legend = "Modelo 3", col = 4, lty = 1)
+grid()
+
+plot(residuals(modelo4), xlab = "Tiempo", ylab = "Residuales",col = "purple")
+abline(h=c(-2*sqrt(modelo4$sigma2),0,2*sqrt(modelo4$sigma2)),lty=2,col=2)
+legend("bottomright", legend = "Modelo 4", col = "purple", lty = 1)
+grid()
+```
+
+
+```{r}
+par(pty="s")
+plot(modelo1$fitted,residuals(modelo1),xlab = "Valores Ajustados", ylab = "Residuales", col = "salmon")
+abline(h=c(-2*sqrt(modelo1$sigma2),0,2*sqrt(modelo1$sigma2)),lty=2,col=2)
+grid()
+legend("bottomright", legend = "Modelo 1", col = "salmon", lty = 1)
+
+plot(modelo2$fitted,residuals(modelo2),xlab = "Valores Ajustados", ylab = "Residuales", col = 3)
+abline(h=c(-2*sqrt(modelo2$sigma2),0,2*sqrt(modelo2$sigma2)),lty=2,col=2)
+grid()
+legend("bottomright", legend = "Modelo 2", col = 3, lty = 1)
+
+plot(modelo3$fitted,residuals(modelo3),xlab = "Valores Ajustados", ylab = "Residuales", col = 4)
+abline(h=c(-2*sqrt(modelo3$sigma2),0,2*sqrt(modelo3$sigma2)),lty=2,col=2)
+grid()
+legend("bottomright", legend = "Modelo 3", col = 4, lty = 1)
+
+plot(modelo4$fitted,residuals(modelo4),xlab = "Valores Ajustados", ylab = "Residuales", col = "purple")
+abline(h=c(-2*sqrt(modelo4$sigma2),0,2*sqrt(modelo4$sigma2)),lty=2,col=2)
+grid()
+legend("bottomright", legend = "Modelo 4", col = "purple", lty = 1)
+```
+
+
+ACF de los residuales
+
+
+```{r}
+par(pty="s")
+acf(as.numeric(residuals(modelo1)),ci.type="ma",lag.max=36,main="ACF residuos Modelo 1",ci.col=2, col="salmon", lwd=2)
+
+acf(as.numeric(residuals(modelo2)),ci.type="ma",lag.max=36,main="ACF residuos Modelo 2",ci.col=2, col=3, lwd=2)
+
+acf(as.numeric(residuals(modelo3)),ci.type="ma",lag.max=36,main="ACF residuos Modelo 3",ci.col=2, col=4, lwd=2)
+
+acf(as.numeric(residuals(modelo4)),ci.type="ma",lag.max=36,main="ACF residuos Modelo 4",ci.col=2, col="purple", lwd=2)
+```
+
+
+```{r}
+par(pty="s")
+pacf(as.numeric(residuals(modelo1)),lag.max=36,main="PACF residuos Modelo 1",ci.col=2, col="salmon", lwd=2)
+
+pacf(as.numeric(residuals(modelo2)),lag.max=36,main="PACF residuos Modelo 2",ci.col=2, col=3, lwd=2)
+
+pacf(as.numeric(residuals(modelo3)),lag.max=36,main="PACF residuos Modelo 3",ci.col=2, col=4, lwd=2)
+
+pacf(as.numeric(residuals(modelo4)),lag.max=36,main="PACF residuos Modelo 4",ci.col=2, col="purple", lwd=2)
+```
+
+Test Ljung Box
+
+
+```{r}
+#Funci´on usuario para obtener resultados Ljung-Box
+#como se presentan en estas notas de clase
+BP.LB.test=function(serie,maxlag,type="Box"){
+  aux=floor(maxlag/6);
+  X.squared=c(rep(NA,aux))
+  df=c(rep(NA,aux))
+  p.value=c(rep(NA,aux))
+  for(i in 1:aux){
+    test=Box.test(serie,lag=(6*i),type=type)
+    X.squared[i]=test[[1]]
+    df[i]=test[[2]]
+    p.value[i]=test[[3]]
+  }
+  lag=6*c(1:aux)
+  14
+  teste=as.data.frame(cbind(X.squared,df,p.value))
+  rownames(teste)=lag
+  teste
+}
+```
+
+
+```{r}
+#Test Ljung-Box para residuales de los modelos 1 a 6
+BP.LB.test(residuals(modelo1),36,type="Ljung")
+BP.LB.test(residuals(modelo2),36,type="Ljung")
+BP.LB.test(residuals(modelo3),36,type="Ljung")
+BP.LB.test(residuals(modelo4),36,type="Ljung")
+```
 
