@@ -570,3 +570,28 @@ BP.LB.test(residuals(modelo3),36,type="Ljung")
 BP.LB.test(residuals(modelo4),36,type="Ljung")
 ```
 
+
+
+```{r}
+#Test Shapiro para residuales de los modelos 1, 3 y 4
+shapiro.test(residuals(modelo1))
+shapiro.test(residuals(modelo3))
+shapiro.test(residuals(modelo4))
+```
+
+
+
+```{r}
+#Gr´afico Normalidad solo para modelos 1, 3 y 4
+par(pty="s")
+qqnorm(residuals(modelo1), col="salmon");qqline(residuals(modelo1))
+legend("topleft",legend=c("VP-Shapiro=0.8303"),bty="n")
+
+qqnorm(residuals(modelo3), col=4);qqline(residuals(modelo3))
+legend("topleft",legend=c("VP-Shapiro=0.7928"),bty="n")
+
+qqnorm(residuals(modelo4), col="purple");qqline(residuals(modelo4))
+legend("topleft",legend=c("VP-Shapiro=0.8615"),bty="n")
+```
+
+
