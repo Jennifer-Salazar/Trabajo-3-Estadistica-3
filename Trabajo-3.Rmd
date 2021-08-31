@@ -180,7 +180,7 @@ coeftest(modelo1)
 pronostico1=ts(as.data.frame(forecast(modelo1,h=12,level=95)),freq=12,start=c(2019,1))
 pronostico1
 
-accuracy(pronostico1[,1],ytf)
+medidas_pron_1 <- accuracy(pronostico1[,1],ytf)
 ```
 
 #######################################################################
@@ -205,7 +205,7 @@ coeftest(modelo2)
 pronostico2=ts(as.data.frame(forecast(modelo2,h=12,level=95)),freq=12,start=c(2019,1))
 pronostico2
 
-accuracy(pronostico2[,1],ytf)
+medidas_pron_2 <- accuracy(pronostico2[,1],ytf)
 ```
 
 
@@ -249,7 +249,7 @@ coeftest(modelo3)
 pronostico3=ts(as.data.frame(forecast(modelo3,h=12,level=95)),freq=12,start=c(2019,1))
 pronostico3
 
-accuracy(pronostico3[,1],ytf)
+medidas_pron_3 <- accuracy(pronostico3[,1],ytf)
 ```
 
 
@@ -296,7 +296,7 @@ coeftest(modelo4)
 pronostico4=ts(as.data.frame(forecast(modelo4,h=12,level=95)),freq=12,start=c(2019,1))
 pronostico4
 
-accuracy(pronostico4[,1],ytf)
+medidas_pron_4 <- accuracy(pronostico4[,1],ytf)
 ```
 
 # Gráficas de ajuste de los modelos:
@@ -592,6 +592,341 @@ legend("topleft",legend=c("VP-Shapiro=0.7928"),bty="n")
 
 qqnorm(residuals(modelo4), col="purple");qqline(residuals(modelo4))
 legend("topleft",legend=c("VP-Shapiro=0.8615"),bty="n")
+```
+
+
+tabla de medidas de pronostico
+
+
+```{r}
+#Funci´on para calcular la amplitud de los I.P
+amplitud=function(LIP,LSP){
+a=LSP-LIP
+am=mean(a)
+am
+}
+#Funci´on para calcular la cobertura de los I.P
+cobertura=function(real,LIP,LSP){
+I=ifelse(real>=LIP & real<=LSP,1,0)
+p=mean(I)
+p
+}
+```
+
+
+
+
+```{r}
+#Amplitud y cobertura de los I.P
+Amplitud1=amplitud(LIP=pronostico1[,2],LSP=pronostico1[,3])
+Cobertura1=cobertura(real=ytf,LIP=pronostico1[,2],LSP=pronostico1[,3]) 
+
+
+Amplitud2=amplitud(LIP=pronostico2[,2],LSP=pronostico2[,3])
+Cobertura2=cobertura(real=ytf,LIP=pronostico2[,2],LSP=pronostico2[,3]) 
+
+
+Amplitud3=amplitud(LIP=pronostico3[,2],LSP=pronostico3[,3])
+Cobertura3=cobertura(real=ytf,LIP=pronostico3[,2],LSP=pronostico3[,3]) 
+
+Amplitud4=amplitud(LIP=pronostico4[,2],LSP=pronostico4[,3])
+Cobertura4=cobertura(real=ytf,LIP=pronostico4[,2],LSP=pronostico4[,3]) 
+```
+
+```{r}
+medidas_pron_1
+medidas_pron_2
+medidas_pron_3
+medidas_pron_4
+
+RMSE <- c(medidas_pron_1[2],medidas_pron_2[2],medidas_pron_3[2],medidas_pron_4[2])
+MAE <- c(medidas_pron_1[3],medidas_pron_2[3],medidas_pron_3[3],medidas_pron_4[3])
+MAPE <- c(medidas_pron_1[5],medidas_pron_2[5],medidas_pron_3[5],medidas_pron_4[5])
+
+Amplitud <- c(Amplitud1, Amplitud2, Amplitud3, Amplitud4)
+Cobertura <- c(Cobertura1,Cobertura2, Cobertura3, Cobertura4)
+
+df_medidas_pron <- data.frame(Modelo = Modelo, RMSE = RMSE, MAE=MAE, MAPE=MAPE, Amplitud=Amplitud, Cobertura=Cobertura)
+
+df_medidas_pron
+```
+
+
+
+
+
+
+
+$$
+\begin{array}{|c|c|c|}
+\hline
+Modelo&RMSE&MAE&MAPE(\%)&Amplitud&Cobertura(\%)\\
+\hline
+Modelo~1&3.195849&2.807686&2.707103&17.27366&100\\
+Modelo~2&4.066504&3.504108&3.333741&17.19563&100\\
+Modelo~3&3.012461&2.501449&2.424552&19.28904&100\\
+Modelo~4&3.049536&2.372956&2.309238&19.06903&100\\
+\hline
+\end{array}
+$$
+
+
+Grafico de pronosticos 
+
+
+```{r}
+ytpron1 <- pronostico1[,1]
+ytpron2 <- pronostico2[,1]
+ytpron3 <- pronostico3[,1]
+ytpron4 <- pronostico4[,1]
+
+
+```
+
+
+
+```{r}
+#Grafico para comparar pron´osticos puntuales
+par(pty="s")
+plot(ytf,type="b",pch=19,col=1,lwd=2,ylim=c(80,115), xaxt="n")
+axis(1,at=time(ytf),labels=c("Ene2019","Feb2019","Mar2019","Abr2019", "May2019", "Jun2019", "Jul2019", "Ago2019", "Sep2019", "Oct2019", "Nov2019", "Dic2019"), las=2, cex.axis=0.7)
+lines(ytpron1,pch=1,col="salmon",type="b",lwd=2)
+lines(ytpron2,pch=2,type="b",col=3,lwd=2)
+lines(ytpron3,pch=3,type="b",col=4,lwd=2)
+lines(ytpron4,pch=4,type="b",col="purple",lwd=2)
+legend("bottomright",legend=c("Real","Modelo1","Modelo2","Modelo3","Modelo4"),
+pch=c(19,1:4),col=c(1,"salmon",2:3,"purple"),lwd=2)
+grid()
+```
+
+
+
+
+
+Parte final: Conclusiones
+
+
+Ajuste de los modelos 
+
+
+```{r}
+mes <- seasonaldummy(yt) #Matriz con las 11 primeras variables Indicadoras mes
+
+
+#Separando una a una las 11 variables indicadoras
+
+I1 <- mes[,1]
+I2 <- mes[,2]
+I3 <- mes[,3]
+I4 <- mes[,4]
+I5 <- mes[,5]
+I6 <- mes[,6]
+I7 <- mes[,7]
+I8 <- mes[,8]
+I9 <- mes[,9]
+I10 <- mes[,10]
+I11 <- mes[,11]
+
+
+mesnuevo <- seasonaldummy(yt, h=12)
+#Separando una a una las 11 indicadoras para los tiempos de pron?stico
+I1n=mesnuevo[,1]
+I2n=mesnuevo[,2]
+I3n=mesnuevo[,3]
+I4n=mesnuevo[,4]
+I5n=mesnuevo[,5]
+I6n=mesnuevo[,6]
+I7n=mesnuevo[,7]
+I8n=mesnuevo[,8]
+I9n=mesnuevo[,9]
+I10n=mesnuevo[,10]
+I11n=mesnuevo[,11]
+
+```
+
+
+Modelo 1b
+
+
+```{r}
+modelo1b <- lm(yt~t+I(t^2)+I1+I2+I3+I4+I5+I6+I7+I8+I9+I10+I11)
+summary(modelo1b)
+```
+
+Modelo 2b
+
+```{r}
+#indique el valor correspondiente a p y q en la función Arima, así como la matriz de predictores X en xreg=X y
+#el vector para argumento fixed
+modelo2b <- Arima(yt,order=c(16,0,17),xreg=X, fixed=c(rep(NA,3), rep(0,7), NA, rep(0,4), NA, rep(0,15), NA, NA,rep(NA,14)),  method="ML")
+
+coeftest(modelo2b)
+```
+
+
+Modelo 3b
+
+```{r}
+modelo3b <- Arima(yt,order=c(8,1,6),seasonal=list(order=c(0,1,1)),
+fixed=c(NA,NA,rep(0,5),NA, rep(0,3), NA, 0, NA, NA),method="ML")
+
+coeftest(modelo3b)
+```
+
+
+
+
+Modelo 4b
+
+
+## Ajuste modelo 3 Descomposición aditiva & Loess cuadrático
+
+
+```{r}
+#Descomposición aditiva de la serie recortada
+descom=decompose(yt,type="additive")
+
+s=12 #Longitud del periodo estacional
+
+#Componente estacional estimada de la descomposición de la serie recortada
+St=descom$seasonal
+
+
+deltas_i=factoresdeltai(descom=descom,s=12,estacionini=1) #Obteniendo los s factores estacionales estimados
+
+
+#el período es s=12 y la serie arranca en estación 1
+deltas <- data.frame(deltas_i)
+
+
+#Pronósticos para la componente estacional usando estimaciones del filtro de descomposición clásica
+
+#los pronósticos inician en enero 2019 y terminan en diciembre 2019
+
+i=c(1,2,3,4,5,6,7,8,9,10,11,12) #identificando la estación correspondiente a los m=12 períodos de pronósticos
+
+Stnuevo=deltas_i[i] #Asignando el valor de St a los periodos a pronosticar
+Stnuevo=ts(Stnuevo,frequency=12,start=c(2019,1)) #convirtiendo en serie de tiempo al pronóstico de St
+Stnuevo
+
+#Desestacionalizando o ajustando estacionalmente a la serie recortada, según modelo aditivo
+ytd=yt-St
+
+#LOESS cuadrático (AICC) sobre serie desestacionalizada
+modelo4b=loess.as(t,ytd,degree=2,criterion="aicc",family="gaussian",plot=F)
+summary(modelo4b)
+alfa.optim2=modelo4b$pars$span #guardando el valor óptimo del parámetro alfa
+```
+
+
+```{r}
+#Ajustes
+
+yhatmodelo1b <- ts(fitted(modelo1b), start  = c(2001,1), frequency = 12)
+yhatmodelo2b<- modelo2b$fitted
+yhatmodelo3b <- modelo3b$fitted
+modelo4b_Tt <- ts(fitted(modelo4b), start  = c(2001,1), frequency = 12)
+yhatmodelo4b <- modelo4b_Tt + St # Ajuste D&LC(AICC)
+
+```
+
+
+```{r}
+# Modelo 1b 
+par(pty="s")
+plot(yt,main="Ajuste Modelo 1b", cex.main=1)
+lines(yhatmodelo1b,col="#2999D1", lwd=2)
+legend("topleft",legend=c("Real","ajustada"),col=c("black", "#2999D1"),lwd=2)
+grid()
+
+# Modelo 2b
+plot(yt,main="Ajuste Modelo 2b", cex.main=1)
+lines(yhatmodelo2b,col="#D64653", lwd=2)
+legend("topleft",legend=c("Real","ajustada"),col=c("black","#D64653"),lwd=2)
+grid()
+
+# Modelo 3b
+plot(yt,main="Ajuste Modelo 3b", cex.main=1)
+lines(yhatmodelo3b,col="#18CF82", lwd=2)
+legend("topleft",legend=c("Real","ajustada"),col=c("black", "#18CF82"),lwd=2)
+grid()
+
+# Modelo 4b
+plot(yt,main="Ajuste Modelo 4b", cex.main=1)
+lines(yhatmodelo4b,col="#E9A81D", lwd=2)
+legend("topleft",legend=c("Real","ajustada"),col=c("black","#E9A81D"),lwd=2)
+grid()
+```
+
+
+
+
+Medidas de ajuste
+
+
+```{r}
+# Modelo 1b
+k1b <- length(coef(modelo1b)[coef(modelo1b)!=0]) #numero parametros modelo 1
+AIC1b <- exp(crit.inf.resid(residuals(modelo1b),n.par=npar1))
+BIC1b <- exp(crit.inf.resid(residuals(modelo1b) ,n.par=npar1, AIC="FALSE"))
+
+#Modelo 2b
+k2b <- length(coef(modelo2b)[coef(modelo2b)!=0])
+AIC2b<- exp(crit.inf.resid(residuales=residuals(modelo2b),n.par=k2b))
+BIC2b<- exp(crit.inf.resid(residuales=residuals(modelo2b),n.par=k2b,AIC="FALSE"))
+
+#Modelo 3b
+
+k3b <- length(coef(modelo3b)[coef(modelo3b)!=0])
+AIC3b=exp(crit.inf.resid(residuales=residuals(modelo3b),n.par=k3b))
+BIC3b=exp(crit.inf.resid(residuales=residuals(modelo3b),n.par=k3b,AIC="FALSE"))
+
+#Modelo 4b
+et4 <- yt - yhatmodelo4b
+k4b <- round(modelo4b$enp)+s-1
+AIC4b <- exp(crit.inf.resid(residuales=et4,n.par=k4b))
+BIC4b <- exp(crit.inf.resid(residuales=et4,n.par=k4b,AIC="FALSE"))
+
+
+Modelo <- c("Modelo 1b", "Modelo 2b", "Modelo 3b", "Modelo 4b")
+p <- c(k1b, k2b, k3b, k4b)
+AIC <- c(AIC1b, AIC2b, AIC3b, AIC4b)
+BIC <- c(BIC1b, BIC2b, BIC3b, BIC4b) 
+
+medidas_ajuste <- data.frame(Modelo, p, AIC, BIC)
+kable(medidas_ajuste)
+```
+
+
+$$
+\begin{array}{|c|c|c|}
+\hline
+Modelo&p&AIC&BIC\\
+\hline
+Modelo~1b&14&16.85948&20.98234\\
+Modelo~2b&21&11.24595&15.61388\\
+Modelo~3b&6&11.73588&12.88944\\
+Modelo~4b&24&11.18417&16.27338\\
+\hline
+\end{array}
+$$
+
+
+Gráfico de pronosticos
+
+
+```{r}
+#Grafico para comparar pron´osticos puntuales
+par(pty="s")
+plot(ytf,type="b",pch=19,col=1,lwd=2,ylim=c(80,115), xaxt="n")
+axis(1,at=time(ytf),labels=c("Ene2019","Feb2019","Mar2019","Abr2019", "May2019", "Jun2019", "Jul2019", "Ago2019", "Sep2019", "Oct2019", "Nov2019", "Dic2019"), las=2, cex.axis=0.7)
+lines(ytpron1b,pch=1,col="salmon",type="b",lwd=2)
+lines(ytpron2b,pch=2,type="b",col=3,lwd=2)
+lines(ytpron3b,pch=3,type="b",col=4,lwd=2)
+lines(ytpron4b,pch=4,type="b",col="purple",lwd=2)
+legend("bottomright",legend=c("Real","Modelo1","Modelo2","Modelo3","Modelo4"),
+pch=c(19,1:4),col=c(1,"salmon",2:3,"purple"),lwd=2)
+grid()
 ```
 
 
