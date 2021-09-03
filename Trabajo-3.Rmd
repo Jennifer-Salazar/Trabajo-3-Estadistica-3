@@ -745,6 +745,10 @@ I11n=mesnuevo[,11]
 ```
 
 
+
+
+
+
 Modelo 1b
 
 
@@ -754,6 +758,29 @@ summary(modelo1b)
 ```
 
 Modelo 2b
+
+
+```{r}
+t=1:n
+t2=t^2
+
+yt=ts(datos[t],freq=12,start=c(2001,1)) #serie recortada
+
+
+#Defina la matriz de variables indicadoras
+Indicadoras=seasonaldummy(yt)
+
+X=cbind(t,t2,Indicadoras)
+
+#Definiendo variables para pronósticos
+tnuevo=(n+1):length(datos)
+t2nuevo=tnuevo^2
+Indicadorasnuevo=seasonaldummy(yt,h=12) 
+
+Xnuevo=cbind(t=tnuevo,t2=t2nuevo,Indicadoras=Indicadorasnuevo) #matriz predictores en el pronóstico
+ytf=ts(datos[tnuevo],freq=12,start=c(2019,1)) 
+```
+
 
 ```{r}
 #indique el valor correspondiente a p y q en la función Arima, así como la matriz de predictores X en xreg=X y
@@ -783,6 +810,18 @@ Modelo 4b
 
 
 ```{r}
+
+#Creando función para extraer correctamente estimaciones de los efectos estacionales 𝜹𝒊 por filtro de descomposición
+factoresdeltai=function(descom,s,estacionini){
+if(estacionini==1){
+deltasi=descom$figure
+}
+if(estacionini!=1){
+j=estacionini;deltasi=c(descom$figure[(s-j+2):s],descom$figure[1:(s-j+1)])
+}
+deltasi
+}
+
 #Descomposición aditiva de la serie recortada
 descom=decompose(yt,type="additive")
 
@@ -867,8 +906,8 @@ Medidas de ajuste
 ```{r}
 # Modelo 1b
 k1b <- length(coef(modelo1b)[coef(modelo1b)!=0]) #numero parametros modelo 1
-AIC1b <- exp(crit.inf.resid(residuals(modelo1b),n.par=npar1))
-BIC1b <- exp(crit.inf.resid(residuals(modelo1b) ,n.par=npar1, AIC="FALSE"))
+AIC1b <- exp(crit.inf.resid(residuals(modelo1b),n.par=k1b))
+BIC1b <- exp(crit.inf.resid(residuals(modelo1b) ,n.par=k1b, AIC="FALSE"))
 
 #Modelo 2b
 k2b <- length(coef(modelo2b)[coef(modelo2b)!=0])
@@ -894,7 +933,7 @@ AIC <- c(AIC1b, AIC2b, AIC3b, AIC4b)
 BIC <- c(BIC1b, BIC2b, BIC3b, BIC4b) 
 
 medidas_ajuste <- data.frame(Modelo, p, AIC, BIC)
-kable(medidas_ajuste)
+medidas_ajuste
 ```
 
 
@@ -912,21 +951,109 @@ Modelo~4b&24&11.18417&16.27338\\
 $$
 
 
-Gráfico de pronosticos
+Pronosticos
 
-
+Modelo 1b
 ```{r}
-#Grafico para comparar pron´osticos puntuales
-par(pty="s")
-plot(ytf,type="b",pch=19,col=1,lwd=2,ylim=c(80,115), xaxt="n")
-axis(1,at=time(ytf),labels=c("Ene2019","Feb2019","Mar2019","Abr2019", "May2019", "Jun2019", "Jul2019", "Ago2019", "Sep2019", "Oct2019", "Nov2019", "Dic2019"), las=2, cex.axis=0.7)
-lines(ytpron1b,pch=1,col="salmon",type="b",lwd=2)
-lines(ytpron2b,pch=2,type="b",col=3,lwd=2)
-lines(ytpron3b,pch=3,type="b",col=4,lwd=2)
-lines(ytpron4b,pch=4,type="b",col="purple",lwd=2)
-legend("bottomright",legend=c("Real","Modelo1","Modelo2","Modelo3","Modelo4"),
-pch=c(19,1:4),col=c(1,"salmon",2:3,"purple"),lwd=2)
-grid()
+ytpron1 <- predict(modelo1b, newdata=data.frame(t=tnuevo, I1=I1n, I2=I2n, I3=I3n, I4=I4n, I5=I5n, I6=I6n, I7=I7n, I8=I8n, I9=I9n, I10=I10n, I11=I11n), interval="prediction")
+
+predmodelo1b <- ts(ytpron1,freq=12,start=c(2019,1))
+
+amplitud(LIP=predmodelo1b[,2],LSP=predmodelo1b[,3])
+cobertura(real=ytf,LIP=predmodelo2b[,2],LSP=predmodelo2b[,3])
+
+ytpron1b <- predmodelo1b[,1]
+ytpron1b
+
+accuracy(ytpron1b,ytf)
 ```
 
 
+Modelo 2b
+
+
+```{r}
+ythat2b=modelo2b$fitted
+
+
+predmodelo2b=ts(as.data.frame(forecast(modelo2b,xreg=Xnuevo,level=95)),freq=12, start=c(2019,1))
+predmodelo2b
+ytpron2b=predmodelo2b[,1] #Tomando el pronóstico puntual. Este objeto tiene fechas
+
+#Medidas precisión pronósticos
+accuracy(ytpron2b,ytf)
+amplitud(LIP=predmodelo2b[,2],LSP=predmodelo2b[,3])
+cobertura(real=ytf,LIP=predmodelo2b[,2],LSP=predmodelo2b[,3])
+```
+
+
+Modelo 3b
+
+
+```{r}
+pronostico3b=ts(as.data.frame(forecast(modelo3b,h=12,level=95)),freq=12,start=c(2019,1))
+pronostico3b
+ytpron3b <- pronostico3b[,1]
+accuracy(ytpron3b,ytf)
+amplitud(LIP=pronostico3b[,2],LSP=pronostico3b[,3])
+cobertura(real=ytf, LIP=pronostico3b[,2],LSP=pronostico3b[,3])
+
+```
+
+Modelo 4b
+
+
+```{r}
+#Pronósticos de la tendencia por loess cuadrático óptimo (AICC)
+Ttnuevo4b <- predict(loess(ytd~t,span=alfa.optim2,degree=2,control=loess.control(surface="direct")), data.frame(t=tnuevo),se=FALSE)
+Ttnuevo4b <- ts(Ttnuevo4b,freq=12,start=c(2019,1)) #convirtiendo en serie de tiempo al pronóstico de Tt, modelo 3
+ytpron4b <- Ttnuevo4b + Stnuevo #Pronóstico puntual Modelo 2
+ytpron4b
+#Tabla con pronósticos de las componentes y de la serie, Modelo 2
+tablapron4b <- cbind(Pron_Tt=Ttnuevo4b,Pron_St=Stnuevo,Pron_serie=ytpron4b)
+tablapron4b
+
+accuracy(ytpron4b,ytf)
+```
+
+
+```{r}
+#Grafico para comparar pronosticos puntuales
+par(pty="s")
+plot(ytf,type="b",pch=19,col=1,lwd=2,ylim=c(80,120), xaxt="n")
+axis(1,at=time(ytf),labels=c("Ene2019","Feb2019","Mar2019","Abr2019", "May2019", "Jun2019", "Jul2019", "Ago2019", "Sep2019", "Oct2019", "Nov2019", "Dic2019"), las=2, cex.axis=0.7)
+lines(ytpron1b,pch=1,col="#2999D1",type="b",lwd=2)
+lines(ytpron2b,pch=2,type="b",col="#D64653",lwd=2)
+lines(ytpron3b,pch=3,type="b",col="#18CF82",lwd=2)
+lines(ytpron4b,pch=4,type="b",col="#E9A81D",lwd=2)
+legend("bottomright",legend=c("Real","Modelo 1b","Modelo 2b","Modelo 3b","Modelo 4b"),
+pch=c(19,1:4),col=c(1,"#2999D1", "#D64653","#18CF82", "#E9A81D"),lwd=2)
+grid()
+```
+
+```{r}
+# Modelo 1b 
+par(pty="s")
+plot(yt,main="Ajuste Modelo 1b", cex.main=1)
+lines(yhatmodelo1b,col="#2999D1", lwd=2)
+legend("topleft",legend=c("Real","ajustada"),col=c("black", "#2999D1"),lwd=2)
+grid()
+
+# Modelo 2b
+plot(yt,main="Ajuste Modelo 2b", cex.main=1)
+lines(yhatmodelo2b,col="#D64653", lwd=2)
+legend("topleft",legend=c("Real","ajustada"),col=c("black","#D64653"),lwd=2)
+grid()
+
+# Modelo 3b
+plot(yt,main="Ajuste Modelo 3b", cex.main=1)
+lines(yhatmodelo3b,col="#18CF82", lwd=2)
+legend("topleft",legend=c("Real","ajustada"),col=c("black", "#18CF82"),lwd=2)
+grid()
+
+# Modelo 4b
+plot(yt,main="Ajuste Modelo 4b", cex.main=1)
+lines(yhatmodelo4b,col="#E9A81D", lwd=2)
+legend("topleft",legend=c("Real","ajustada"),col=c("black","#E9A81D"),lwd=2)
+grid()
+```
